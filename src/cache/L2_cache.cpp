@@ -1,24 +1,21 @@
-#include <cache/L1_cache.h>
+#include <cache/L2_cache.h>
 
-L1Cache::L1Cache() {
-    int i=0;
-    sets.resize(no_sets);
 
-    for(i; i < no_sets; i++){
-        sets[i] = new Set(no_ways);
-    }
-
+L2Cache::L2Cache() {
     misses = 0;
-    upgrade_misses = 0;
-    accesses = 0;
+    msg_queues.resize(BANKS);
+    sets.resize(this->no_sets);
+    for(int i=0; i < this->no_sets; i++)
+        sets[i] = new Set(no_ways);
 }
 
-void L1Cache::lookup(Block *_block) {
+void L2Cache::lookup(Block *_block) {
     for (int i = 0; i < no_ways; i++) {
         if (sets[_block->index]->blocks[i].valid && sets[_block->index]->blocks[i].tag == _block->tag) {
             _block->way = i;
-            // CHANGED IN COPENHEGAN 
-            _block->block_state = sets[_block->index]->blocks[i].block_state;
+            // CHANGED IN COPENHEGAN
+            // Here dir_entry should be in sync with all the changes. Hence direct pointer is given
+            _block->dir_entry = sets[_block->index]->blocks[i].dir_entry;
             //
             _block->valid = true;
             return;
@@ -26,16 +23,13 @@ void L1Cache::lookup(Block *_block) {
     }
 }
 
-void L1Cache::invalidate(Block *_block) {
+void L2Cache::invalidate(Block *_block) {
     sets[_block->index]->invalid_ways.insert(_block->way);
     sets[_block->index]->blocks[_block->way].valid = false;
-    // CHANGED IN COPENHEGAN 
-    sets[_block->index]->blocks[_block->way].block_state = INVALID; 
-    //
     sets[_block->index]->blocks[_block->way].tag = 0;
 }
 
-void L1Cache::update_repl_params(int index, int way) {
+void L2Cache::update_repl_params(int index, int way) {
     
     struct list_item *_item = sets[index]->repl_list.find_item(way);
     if (is_null(_item)) {
@@ -49,7 +43,7 @@ void L1Cache::update_repl_params(int index, int way) {
     sets[index]->repl_list.move_to_front(_item);
 }
 
-int L1Cache::invoke_repl_policy(int index) {
+int L2Cache::invoke_repl_policy(int index) {
     int _victim_way = -1;
     Block _tmp;
     // it should set the victim cache block
@@ -69,7 +63,7 @@ int L1Cache::invoke_repl_policy(int index) {
     return _victim_way;
 }
 
-void L1Cache::copy(Block *_block) {
+void L2Cache::copy(Block *_block) {
 
     _block->way = get_target_way(_block->index);
 
@@ -84,7 +78,7 @@ void L1Cache::copy(Block *_block) {
 
 }
 
-int L1Cache::get_target_way(int index) {
+int L2Cache::get_target_way(int index) {
 
     if (sets[index]->invalid_ways.empty())
         return -1;
@@ -93,19 +87,22 @@ int L1Cache::get_target_way(int index) {
 
 }
 
-void L1Cache::get_block(unsigned long long addr,
+void L2Cache::get_block(unsigned long long addr,
             Block *dst) {
-    dst->addr = addr;  
+    
+    ///#############
+    dst->addr = addr;
+    ///##############
+    
     addr = addr >> no_block_bits;
     dst->index = addr & mask;
     dst->tag = addr >> no_index_bits;
-
 }
 
-bool L1Cache::empty_msg_queue() {
-    return msgs.empty();
-}
+bool L2Cache::empty_msg_queues() {
+    bool ret = true;
+    for(auto q: msg_queues)
+        ret = ret && q.empty();
 
-bool L1Cache::empty_trace_queue() {
-    return trace_input.empty();
+    return ret;
 }
