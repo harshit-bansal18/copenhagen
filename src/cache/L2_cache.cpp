@@ -106,3 +106,7 @@ bool L2Cache::empty_msg_queues() {
 
     return ret;
 }
+
+void L2Cache::queue_msg(Msg *_msg, int bank) {
+    msg_queues[bank].push(_msg);
+}

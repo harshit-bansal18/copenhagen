@@ -26,6 +26,8 @@ class Cache {
 };
 
 class L1Cache:public Cache {
+    // cannot allow direct access to cache blocks
+    vector<Set *> sets;
 public:
     #ifdef L1_ASSOC
         const unsigned int no_ways = L1_ASSOC;
@@ -55,7 +57,6 @@ public:
     
     int ID;
 
-    vector<Set *> sets;
     policy repl_policy;
 
     unsigned long accesses;
@@ -71,10 +72,11 @@ public:
     void invalidate(Block *_block);
     int invoke_repl_policy(int index);
     void update_repl_params(int index, int way);
-    void get_block(unsigned long long tag, Block *_block);
+    void get_block(unsigned long long addr, Block *_block);
     int get_target_way(int index);
     unsigned long long get_addr(Block *_block);
     void copy(Block *_block);
     bool empty_trace_queue();
     bool empty_msg_queue();
+    void set_block_state(int index, int way, state new_state);
 };

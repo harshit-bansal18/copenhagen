@@ -83,7 +83,8 @@ public:
     void update_repl_params(int index, int way);
     int get_target_way(int index);
     unsigned long long get_addr(Block *_block);
-    void get_block(unsigned long long tag, Block *_block);
+    void get_block(unsigned long long addr, Block *_block);
     void copy(Block *_block);
     bool empty_msg_queues();
+    void queue_msg(Msg *_msg, int bank);
 };

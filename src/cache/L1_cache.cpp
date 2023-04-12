@@ -109,3 +109,7 @@ bool L1Cache::empty_msg_queue() {
 bool L1Cache::empty_trace_queue() {
     return trace_input.empty();
 }
+
+void L1Cache::set_block_state(int index, int way, state new_state) {
+    sets[index]->blocks[way].block_state = new_state;
+}

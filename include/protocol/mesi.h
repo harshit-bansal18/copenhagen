@@ -8,6 +8,7 @@ typedef enum {
    GETX,
    UPGR,
    PUT,
+   PUTE,
    PUTX,
    INV,
    SWB,
@@ -29,7 +30,6 @@ public:
    // source
    int cache;
    int id;
-   // destination
    unsigned long long addr;
    msg_type type;
 };
