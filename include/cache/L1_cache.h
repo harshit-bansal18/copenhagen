@@ -79,4 +79,5 @@ public:
     bool empty_trace_queue();
     bool empty_msg_queue();
     void set_block_state(int index, int way, state new_state);
+    void queue_msg(Msg *_msg);
 };

@@ -48,7 +48,7 @@ public:
    Block *l1_block;
    Block *l2_block;
    Mesi();
-   void process_l1_msg(Msg *_msg);
+   void process_l1_msg(Msg *_msg, int core);
    void process_l2_msg(Msg *_msg, int bank_id);
    void process_trace(Trace *_trace);
 };

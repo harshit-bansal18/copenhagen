@@ -66,6 +66,9 @@ int L1Cache::invoke_repl_policy(int index) {
     
     victim = new Block(_tmp.index, _tmp.way, _tmp.tag, _tmp.addr);
     
+    // Copenhegan
+    victim->block_state  = _tmp.block_state;
+    //
     return _victim_way;
 }
 
@@ -112,4 +115,8 @@ bool L1Cache::empty_trace_queue() {
 
 void L1Cache::set_block_state(int index, int way, state new_state) {
     sets[index]->blocks[way].block_state = new_state;
+}
+
+void L1Cache::queue_msg(Msg *_msg) {
+    msgs.push(_msg);
 }

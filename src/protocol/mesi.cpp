@@ -19,8 +19,69 @@ static inline Msg *make_msg_from_L1(int source_core, unsigned long long addr, ms
     new_msg->id = source_core;
     new_msg->type = _type;
     new_msg->addr = addr;
-    
     return new_msg;
+
+}
+
+static inline void handle_put_L1(L1Cache *l1_cache, L2Cache *l2_cache, Block *l1_block, state put_state) {
+    
+    Block _victim;
+    Msg *new_msg;
+    int home_node; 
+
+    l1_block->block_state = put_state;
+    l1_cache->copy(l1_block);
+    l1_cache->update_repl_params(l1_block->index, l1_block->way);
+    
+    // Some block got evicted
+    if (l1_cache->victim) {
+        // Copenhegan: Too much copying here.
+        _victim = *l1_cache->victim;
+        free(l1_cache->victim);
+        l1_cache->victim = NULL;
+        //
+        // There wont be any writeback or msg sent to home node
+        if (_victim.block_state == SHARED)
+            goto ret;
+        // Directory has block in modified state to need to send SWB to notify the directory
+        else if (_victim.block_state == EXCLUSIVE || _victim.block_state == MODIFIED) {
+            home_node = get_home_node(l1_block->addr, l2_cache);
+            new_msg =  make_msg_from_L1(l1_cache->ID, l1_block->addr, SWB);
+            l2_cache->queue_msg(new_msg, home_node);
+        }
+    }
+
+ret:
+    return;
+}
+
+/*
+handle_get_L1:
+    Get request to L1 cache only occurs when L1 cache of another core requests the block which is owned by this L1 cache.
+    @final_state: final state of the block in this cache
+    @requester_cache: Cache pointer of the L1 cache which requested this block
+    
+*/
+static inline void handle_get_L1(L1Cache *l1_cache, L2Cache *l2_cache, L1Cache *requester_cache, Block *l1_block, state final_state) {
+    Msg *new_msg;
+
+    l1_cache->lookup(l1_block);
+    // If the block is not present in the cache, means evicted already.
+    if (!l1_block->valid) {
+        // TODO
+    }
+
+    // Assumed that block is present in the cache. what a fool I am
+    if (final_state == SHARED) {
+        l1_cache->set_block_state(l1_block->index, l1_block->way, SHARED);
+        new_msg = make_msg_from_L1(l1_cache->ID, l1_block->addr, PUT);
+        requester_cache->queue_msg(new_msg);
+    }
+    else if (final_state == INVALID) {
+        l1_cache->invalidate(l1_block);
+        new_msg = make_msg_from_L1(l1_cache->ID, l1_block->addr, PUTX);
+        requester_cache->queue_msg(new_msg);
+    }
 
 }
 
@@ -35,8 +96,10 @@ void Mesi::process_trace(Trace *trace_entry) {
     l1_cache->get_block(trace_entry->address, l1_block);
     l1_cache->lookup(l1_block);
     if(l1_block->valid && l1_block->block_state != INVALID) {
+        
+        l1_cache->update_repl_params(l1_block->index, l1_block->way);
         // Block is present but need to check state of block
-
+        
         // If this is a READ then we really dont care if the block is in S or E or M state
         if (trace_entry->request == READ)
             goto l1_ret;
@@ -83,15 +146,70 @@ l1_ret:
 
 }
 
+
 // Process the msg in queue of L1 Cache
 /****************TODO************/
-void Mesi::process_l1_msg(Msg *_msg) {
-    
+void Mesi::process_l1_msg(Msg *_msg, int core) {
+    L1Cache *l1_cache = l1_caches[core];
+    Block _victim;
+    l1_cache->get_block(_msg->addr, l1_block);
     switch(_msg->type) {
-        case PUT:
-            break;
+    
+    case PUT:
+        // copy the block in S state
+        handle_put_L1(l1_cache, l2_cache, l1_block, SHARED);
+        break;
 
-        default:
-            break;
+    case PUTE:
+        handle_put_L1(l1_cache, l2_cache, l1_block, EXCLUSIVE);
+        break;
+    
+    case PUTX:
+        handle_put_L1(l1_cache, l2_cache, l1_block, MODIFIED);
+        break;
+    // If this L1 cache is the owner of some block.
+    case GET:
+        handle_get_L1(l1_cache, l2_cache, l1_caches[_msg->id], l1_block, SHARED);
+        break;
+    case GETX:
+        handle_get_L1(l1_cache, l2_cache, l1_caches[_msg->id], l1_block, INVALID);
+        break;
+    case UPGR:
+        handle_get_L1(l1_cache, l2_cache, l1_caches[_msg->id], l1_block, INVALID);
+        break;
+    // TODO: Need more hardware support :(
+    case ACK:
+        break;
+    case INV:
+        break;
+    case NACK:
+        break;
+    default:
+        break;
     }
+}
+
+void Mesi::process_l2_msg(Msg *_msg, int bank_id) {
+    l2_cache->get_block(_msg->addr, l2_block);
+
+    switch(_msg->type) {
+    
+    case GET:
+        
+        break;
+    
+    case GETX:
+        break;
+    
+    case UPGR:
+        break;
+    
+    case SWB:
+        break;
+    
+    }
+}
+
+static inline void handle_get_L2(L2Cache *l2_cache, vector<L1Cache *> &l1_caches) {
+
 }
