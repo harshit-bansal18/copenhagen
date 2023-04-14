@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include "pin.H"
+
+
 
 FILE *f_trace, *f_trace_count;
 FILE *f_traces[8];
@@ -10,13 +15,14 @@ UINT64 trace_count = 0;
 UINT64 global_count = 0;
 
 
-void atomizedTrace(THREADID tid, UINT64 addr){
-    fprintf(f_trace[tid], "%d %lu\n", tid, addr);
+void atomizedTrace(THREADID tid, UINT64 addr, bool type){
+    fprintf(f_traces[tid], "%d %lu %c %lu\n", tid, addr, type?'s':'l', global_count);
+    global_count++;
     trace_count++;
     fflush(f_trace);
 }
 
-void RecordMem(THREADID tid, void * taddr, UINT32 size){
+void RecordMem(THREADID tid, void * taddr, UINT32 size, bool type){
     PIN_GetLock(&pLock, tid+1);
     UINT64 addr = (UINT64) taddr;
     UINT64 end_addr = addr + size - 1;
@@ -35,13 +41,13 @@ void RecordMem(THREADID tid, void * taddr, UINT32 size){
 
         UINT64 curr_offset = 0;
         for(UINT64 i = 0; i < count8; i++, curr_offset += 8)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
         for(UINT64 i = 0; i < count4; i++, curr_offset += 4)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
         for(UINT64 i = 0; i < count2; i++, curr_offset += 2)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
         for(UINT64 i = 0; i < count1; i++, curr_offset += 1)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
 
     }
 
@@ -60,18 +66,18 @@ void RecordMem(THREADID tid, void * taddr, UINT32 size){
         UINT64 count1 = first_block_remain;
 
         for(UINT64 i = 0; i < count8; i++, curr_offset += 8)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
         for(UINT64 i = 0; i < count4; i++, curr_offset += 4)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
         for(UINT64 i = 0; i < count2; i++, curr_offset += 2)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
         for(UINT64 i = 0; i < count1; i++, curr_offset += 1)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
 
         for(UINT64 block = first_block+1; block < last_block; block++){
             UINT64 count8 = 64 / 8;
             for(UINT64 i = 0; i < count8; i++, curr_offset += 8)
-                atomizedTrace(tid, addr + curr_offset);
+                atomizedTrace(tid, addr + curr_offset, type);
         }
 
         count8 = last_block_remain / 8;
@@ -83,13 +89,13 @@ void RecordMem(THREADID tid, void * taddr, UINT32 size){
         count1 = last_block_remain;
 
         for(UINT64 i = 0; i < count8; i++, curr_offset += 8)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
         for(UINT64 i = 0; i < count4; i++, curr_offset += 4)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
         for(UINT64 i = 0; i < count2; i++, curr_offset += 2)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
         for(UINT64 i = 0; i < count1; i++, curr_offset += 1)
-            atomizedTrace(tid, addr + curr_offset);
+            atomizedTrace(tid, addr + curr_offset, type);
 
     }
 
@@ -102,13 +108,26 @@ void Instruction(INS ins, void *v){
     
     for(UINT32 mem_op = 0; mem_op < mem_operands; mem_op++){
         UINT32 mem_op_size = INS_MemoryOperandSize(ins, mem_op);
-        int to_record = INS_MemoryOperandIsRead(ins, mem_op) + INS_MemoryOperandIsWritten(ins, mem_op);
-        while(to_record--){
+        if(INS_MemoryOperandIsRead(ins, mem_op)){
+            bool type = false;
             INS_InsertPredicatedCall(
                 ins, IPOINT_BEFORE, (AFUNPTR)RecordMem,
                 IARG_THREAD_ID,
                 IARG_MEMORYOP_EA, mem_op,
                 IARG_UINT32, mem_op_size,
+                IARG_BOOL, type,
+                IARG_END
+            );
+        }
+
+        if(INS_MemoryOperandIsWritten(ins, mem_op)){
+            bool type = true;
+            INS_InsertPredicatedCall(
+                ins, IPOINT_BEFORE, (AFUNPTR)RecordMem,
+                IARG_THREAD_ID,
+                IARG_MEMORYOP_EA, mem_op,
+                IARG_UINT32, mem_op_size,
+                IARG_BOOL, type,
                 IARG_END
             );
         }
@@ -132,7 +151,10 @@ void ThreadFini(THREADID tid, const CONTEXT *ctx, INT32 code, void *v){
 void Fini(INT32 code, void * v){
     fprintf(f_trace_count, " : %lu\n", trace_count);
     fflush(f_trace_count);
-    fclose(f_trace);
+    // fclose(f_trace);
+    for(int i = 0 ; i < 8; i++){
+        fclose(f_traces[i]);
+    }
     fclose(f_trace_count);
 }
 
@@ -154,12 +176,17 @@ INT32 Usage()
 
 int main(int argc, char* argv[]){
     char *filename = argv[6];
-    strcat(filename, ".out");
     filename += 2;
+
+
     for(int i = 0; i < 8; i++){
-        f_traces[i] = fopen(filename + "." + string(i), "w");
+        char nf[100];
+        sprintf(nf, "./%s_output/%s.out.%d", filename, filename,i);
+        f_traces[i] = fopen(nf, "w");
     }
-    // f_trace = fopen(filename, "w");
+
+
+
     f_trace_count = fopen("part1_output.txt", "a");
     fprintf(f_trace_count, "Trace count for %s program is ", filename);
     fflush(f_trace_count);
