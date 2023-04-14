@@ -117,3 +117,35 @@ bool L2Cache::empty_msg_queues() {
 void L2Cache::queue_msg(Msg *_msg, int bank) {
     msg_queues[bank].push(_msg);
 }
+
+void L2Cache::set_directory_state(state dir_state, int index, int way) {
+    sets[index]->blocks[way].dir_entry.curr_state = dir_state;
+}
+
+void L2Cache::set_sharers(vector<int> &sharers, int index, int way) {
+    auto bitvec =  &sets[index]->blocks[way].dir_entry.sharer;
+    bitvec->reset();
+    for(auto i : sharers)
+        bitvec[i] = true;
+    
+}
+
+void L2Cache::set_owner(int owner, int index, int way) {
+    auto bitvec =  &sets[index]->blocks[way].dir_entry.sharer;
+    int mask = 1;
+    bitvec->reset();
+    for (int i = 0; i < 8; i++, mask *=2)
+        bitvec[i] = owner & mask;
+}
+
+void L2Cache::add_sharer(int _sharer, int index, int way) {
+    sets[index]->blocks[way].dir_entry.sharer[_sharer] = true;
+}
+
+void L2Cache::lookup_evicted_blocks(Block *_block) {
+    if (eb_buffer->buffer.find(_block->addr) == eb_buffer->buffer.end()) {
+        return;
+    }
+    _block->valid = true;
+    _block->dir_entry = eb_buffer->buffer[_block->addr]->_block.dir_entry;
+}

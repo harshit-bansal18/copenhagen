@@ -70,7 +70,8 @@ public:
     Block *victim;
 
     OTT *ott;
-    bufferl1 *buffer;
+    pending_msgs *pending_msgs_buffer;
+    trace_buffer *miss_trace_buffer;
 
     L1Cache();
     void lookup(Block *_block);

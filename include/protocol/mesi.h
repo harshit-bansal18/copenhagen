@@ -34,6 +34,7 @@ public:
    int id;
    unsigned long long addr;
    msg_type type;
+   int expected_invalidations;
 };
 
 class Directory_entry{

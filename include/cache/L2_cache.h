@@ -43,6 +43,7 @@ L2Cache: Shared cache
 */
 
 class L2Cache: public Cache {
+    vector<Set*> sets;
 public:
     #ifdef L2_ASSOC
         const unsigned int no_ways = L2_ASSOC;
@@ -71,11 +72,10 @@ public:
 
     const int mask = no_sets -1;
     const int bank_mask = BANKS - 1;
-    vector<Set*> sets;
     Block *victim;
     policy repl_policy;
     vector<queue<Msg *>> msg_queues;
-
+    evicted_blocks *eb_buffer;
     L2Cache();
     void lookup(Block *_block);
     void invalidate(Block *_block);
@@ -87,4 +87,9 @@ public:
     void copy(Block *_block);
     bool empty_msg_queues();
     void queue_msg(Msg *_msg, int bank);
+    void set_directory_state(state dir_state, int index, int way);
+    void set_sharers(vector<int> &sharers, int index, int way);
+    void set_owner(int owner, int index, int way);
+    void add_sharer(int _sharer, int index, int way);
+    void lookup_evicted_blocks(Block *_block);
 };
