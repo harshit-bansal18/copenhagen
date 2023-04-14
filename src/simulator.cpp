@@ -56,7 +56,7 @@ void Simulator::execute_part2(){
 
     for(int i = 0 ; i < THREAD_COUNT; i++){
         if(tmp_msg1_queue[i] != nullptr) 
-            mesi->process_l1_msg(tmp_msg1_queue[i]);
+            mesi->process_l1_msg(tmp_msg1_queue[i], i);
         if(tmp_msg2_queue[i] != nullptr) 
             mesi->process_l2_msg(tmp_msg2_queue[i], i);
     }

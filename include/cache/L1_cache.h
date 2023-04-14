@@ -4,6 +4,7 @@
 #include <utils.h>
 #include <trace.h>
 #include <protocol/mesi.h>
+#include <protocol/ott.h>
 
 using namespace std;
 
@@ -67,6 +68,10 @@ public:
     queue<Msg *> msgs;
 
     Block *victim;
+
+    OTT *ott;
+    bufferl1 *buffer;
+
     L1Cache();
     void lookup(Block *_block);
     void invalidate(Block *_block);

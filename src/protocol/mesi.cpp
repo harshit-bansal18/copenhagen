@@ -185,6 +185,7 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
         handle_get_L1(l1_cache, l2_cache, l1_caches[_msg->id], l1_block, SHARED);
         break;
     case GETX:
+    // q: will the parameter be invalid or modified?
         handle_get_L1(l1_cache, l2_cache, l1_caches[_msg->id], l1_block, INVALID);
         break;
     case UPGR:

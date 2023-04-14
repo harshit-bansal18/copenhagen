@@ -11,6 +11,8 @@ L1Cache::L1Cache() {
     misses = 0;
     upgrade_misses = 0;
     accesses = 0;
+    ott = new OTT();
+    buffer = new bufferl1();
 }
 
 void L1Cache::lookup(Block *_block) {
