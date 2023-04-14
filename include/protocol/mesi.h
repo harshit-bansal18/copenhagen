@@ -12,6 +12,7 @@ typedef enum {
    PUTX,
    INV,
    SWB,
+   WB,
    ACK,
    NACK
 }msg_type;
@@ -23,6 +24,7 @@ typedef enum {
    INVALID,
    PSH,
    PDEX,
+   UNOWNED,
 }state;
 
 class Msg {
@@ -35,6 +37,7 @@ public:
 };
 
 class Directory_entry{
+public:
    bitset<8> sharer;
    state curr_state;
 };

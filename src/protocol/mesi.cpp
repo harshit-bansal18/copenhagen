@@ -23,6 +23,16 @@ static inline Msg *make_msg_from_L1(int source_core, unsigned long long addr, ms
 
 }
 
+static inline Msg *make_msg_from_L2(int bank_id, unsigned long long addr, msg_type _type) {
+    Msg *new_msg;
+    new_msg = new Msg();
+    new_msg->cache = L2;
+    new_msg->id = bank_id;
+    new_msg->type = _type;
+    new_msg->addr = addr;
+    return new_msg;
+}
+
 static inline void handle_put_L1(L1Cache *l1_cache, L2Cache *l2_cache, Block *l1_block, state put_state) {
     
     Block _victim;
@@ -67,8 +77,11 @@ static inline void handle_get_L1(L1Cache *l1_cache, L2Cache *l2_cache, L1Cache *
 
     l1_cache->lookup(l1_block);
     // If the block is not present in the cache, means evicted already.
+    // Case of late intervention
     if (!l1_block->valid) {
         // TODO
+        // dont do anything for now
+        return;
     }
 
     // Assumed that block is present in the cache. what a fool I am
@@ -191,11 +204,12 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
 
 void Mesi::process_l2_msg(Msg *_msg, int bank_id) {
     l2_cache->get_block(_msg->addr, l2_block);
-
+    l2_cache->lookup(l2_block);
+    
+    
     switch(_msg->type) {
     
     case GET:
-        
         break;
     
     case GETX:
@@ -207,9 +221,55 @@ void Mesi::process_l2_msg(Msg *_msg, int bank_id) {
     case SWB:
         break;
     
+    case WB:
+        break;
     }
 }
 
-static inline void handle_get_L2(L2Cache *l2_cache, vector<L1Cache *> &l1_caches) {
+static inline void handle_get_L2(L2Cache *l2_cache, vector<L1Cache *> &l1_caches, Block *l2_block, int bank_id) {
+    Block _victim;
+    Msg *new_msg;
+    int owner;
+    // If the block is not present in L2 then install new one from memory
+    if (!l2_block->valid) {
+        l2_block->dir_entry.curr_state = UNOWNED;
+        l2_cache->copy(l2_block);
+        l2_cache->update_repl_params(l2_block->index, l2_block->way);
+        if (l2_cache->victim) {
+            _victim = *l2_cache->victim;
+            free(l2_cache->victim);
+            l2_cache->victim = NULL;
+            // some block got evicted.
+            // send invalidations
+            switch(_victim.dir_entry.curr_state) {
+            
+            // Simply drop the block
+            case UNOWNED:
+                break;
+            
+            // Need to send invalidations and put the victim in a buffer to collect invalidation acknowledgements
+            case SHARED:
+                for(int i = 0; i < CORES; i++) {
+                    if (_victim.dir_entry.sharer[i] == 1) {
+                        new_msg = make_msg_from_L2(bank_id, _victim.addr, INV);
+                        l1_caches[i]->queue_msg(new_msg);
 
+                    }
+                }
+                // Put the block in buffer now. Set the num invalidations also.
+                break;
+
+            // Get the owner and then invalidate it
+            case MODIFIED:
+                owner = (int)(_victim.dir_entry.sharer.to_ulong());
+                new_msg = make_msg_from_L2(bank_id, _victim.addr, INV);
+                l1_caches[owner]->queue_msg(new_msg);
+                // put block in buffer and set num inv
+                break;
+   
+            case PSH || PDEX: 
+                
+            }
+        }
+    }
 }

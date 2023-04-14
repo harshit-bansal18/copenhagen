@@ -60,6 +60,9 @@ int L2Cache::invoke_repl_policy(int index) {
     
     victim = new Block(_tmp.index, _tmp.way, _tmp.tag, _tmp.addr);
     
+    // Copenhegan
+    victim->dir_entry = _tmp.dir_entry;
+    // 
     return _victim_way;
 }
 
@@ -74,7 +77,11 @@ void L2Cache::copy(Block *_block) {
 
     sets[_block->index]->invalid_ways.erase(_block->way);
     _block->valid = 1; // to be sure
+
+    // Copenhegan. Now dir_entry will also be copied
     sets[_block->index]->blocks[_block->way] = *_block;
+    //
+
 
 }
 

@@ -12,7 +12,7 @@ class Block {
     unsigned long index;
     unsigned int way;
     bool  valid;
-    Directory_entry* dir_entry; // for L2 cache
+    Directory_entry dir_entry; // for L2 cache
     state block_state; // for L1 cache
     // field for state bit
     Block();
