@@ -149,3 +149,30 @@ void L2Cache::lookup_evicted_blocks(Block *_block) {
     _block->valid = true;
     _block->dir_entry = eb_buffer->buffer[_block->addr]->_block.dir_entry;
 }
+
+void L2Cache::drop_evicted_block(Block *_block) {
+    if (eb_buffer->buffer.find(_block->addr) == eb_buffer->buffer.end())
+        throw_error("%s: evicted block not found\n", __func__);
+
+    delete eb_buffer->buffer[_block->addr];
+    eb_buffer->buffer.erase(_block->addr);
+}
+
+int L2Cache::dec_pending_inv(Block *_block) {
+    int ret;
+    if (eb_buffer->buffer.find(_block->addr) == eb_buffer->buffer.end())
+        throw_error("%s: evicted block not found\n", __func__);
+    
+    return (--eb_buffer->buffer[_block->addr]->pending_invals);
+}
+
+void L2Cache::insert_evicted_block(Block *_block, int num_inval) {
+    eb_entry *new_entry;
+    if (eb_buffer->buffer.find(_block->addr) != eb_buffer->buffer.end())
+        throw_error("%s: evicted block already exists\n", __func__);
+
+    new_entry = new eb_entry();
+    new_entry->pending_invals = num_inval;
+    new_entry->_block =  *_block;
+}
+

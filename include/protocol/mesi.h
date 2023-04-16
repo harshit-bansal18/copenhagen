@@ -60,14 +60,16 @@ public:
    void process_l2_msg(Msg *_msg, int bank_id);
    void process_trace(Trace *_trace);
 
-   void handle_put_L1(int core, Block *l1_block, state put_states, int expected_invalidations = 0);
-   void handle_putx_L1_inv_ack(int core, state put_state);
-   void handle_get_L1(int core, int requester_id, Block *l1_block, state final_state);
-   void handle_INV_L1(int core, int source_id, int cache_type, Block* l1_block);
-   void handle_NACK_L1(int core, Block* l1_block);
-   void handle_NACKE_L1(int core, Block* l1_block);
-   void handle_INV_ACK_L1(int core, Block* l1_block);
-   void handle_UPGR_ACK_L1(int core, Block* l1_block);
+   void perform_ott_entry_removal(int core);
+
+   void handle_put_L1(int core, state put_states, int expected_invalidations = 0);
+   void handle_put_L1_inv_ack(int core, state put_state);
+   void handle_get_L1(int core, int requester_id, state final_state);
+   void handle_INV_L1(int core, int source_id, int cache_type);
+   void handle_NACK_L1(int core);
+   void handle_NACKE_L1(int core);
+   void handle_INV_ACK_L1(int core);
+   void handle_UPGR_ACK_L1(int core);
    void handle_WB_ACK_L1(int core);
    void handle_get_L2(int bank_id, int source_core);
    void handle_getx_L2(int bank_id, int source_core);

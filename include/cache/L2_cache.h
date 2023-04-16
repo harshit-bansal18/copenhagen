@@ -95,5 +95,5 @@ public:
     void drop_evicted_block(Block *_block);
     // returns pending inv after decrementing the pendinng invalidations
     int dec_pending_inv(Block *_block);
-    void insert_evicted_block(Block *_block);
+    void insert_evicted_block(Block *_block, int num_inval);
 };
