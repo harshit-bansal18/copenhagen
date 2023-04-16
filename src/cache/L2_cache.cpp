@@ -97,11 +97,11 @@ int L2Cache::get_target_way(int index) {
 void L2Cache::get_block(unsigned long long addr,
             Block *dst) {
     
+    
+    // addr = addr >> no_block_bits;
     ///#############
     dst->addr = addr;
     ///##############
-    
-    addr = addr >> no_block_bits;
     dst->index = addr & mask;
     dst->tag = addr >> no_index_bits;
 }

@@ -1,0 +1,14 @@
+Upgr-Inv race:
+When Inv to a block arrives while upgr request is in progress. (When corresponding block in L2 gets evicted)
+How to respond to Upgr at L2? How to respond to Inv at L1?
+NACK -> State busy
+NACKE -> block is evicted and dont try Upgr again. Cancel the request
+What to do with blocks waiting for that requestNACKE -> block is evicted and dont try Upgr again. Cancel the request
+What to do with blocks waiting for that request.
+
+If Inv reaches L1 after NACK response, before sending the request again check if the pending requests for that block contain INV request, if yes then
+cancel the Upgr request, invalidate the block, send INV_ACK, change Upgr request to GETX, now either send GETX after setting another timer or now. Maybe doesnot matter.
+
+WB-Inv race:
+If L2 Block gets evicted in Modified state, sends inv to L1 owner, and owner also evicts the block. Then on recieving first WB, L2 will completetely
+drop the block. L1 will ignore the INV.

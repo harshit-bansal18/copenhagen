@@ -2,6 +2,7 @@
 #include<bitset>
 #include <cache/L1_cache.h>
 #include <cache/L2_cache.h>
+#include <protocol/ott.h>
 
 typedef enum {
    GET,
@@ -13,8 +14,11 @@ typedef enum {
    INV,
    SWB,
    WB,
-   ACK,
-   NACK
+   INV_ACK,
+   UPGR_ACK,
+   NACK,
+   NACKE,
+   WB_ACK,
 }msg_type;
 
 typedef enum {
@@ -55,4 +59,21 @@ public:
    void process_l1_msg(Msg *_msg, int core);
    void process_l2_msg(Msg *_msg, int bank_id);
    void process_trace(Trace *_trace);
+
+   void handle_put_L1(int core, Block *l1_block, state put_states, int expected_invalidations = 0);
+   void handle_putx_L1_inv_ack(int core, state put_state);
+   void handle_get_L1(int core, int requester_id, Block *l1_block, state final_state);
+   void handle_INV_L1(int core, int source_id, int cache_type, Block* l1_block);
+   void handle_NACK_L1(int core, Block* l1_block);
+   void handle_NACKE_L1(int core, Block* l1_block);
+   void handle_INV_ACK_L1(int core, Block* l1_block);
+   void handle_UPGR_ACK_L1(int core, Block* l1_block);
+   void handle_WB_ACK_L1(int core);
+   void handle_get_L2(int bank_id, int source_core);
+   void handle_getx_L2(int bank_id, int source_core);
+   void handle_upgr_L2(int bank_id, int source_core);
+   void handle_swb_L2(int bank_id, int source_core);
+   void handle_wb_L2(int bank_id, int source_core);
+   void handle_inv_ack_L2(int bank_id, int source_core);
+   void handle_victim_L2(int bank_id, int source_core); 
 };

@@ -92,4 +92,8 @@ public:
     void set_owner(int owner, int index, int way);
     void add_sharer(int _sharer, int index, int way);
     void lookup_evicted_blocks(Block *_block);
+    void drop_evicted_block(Block *_block);
+    // returns pending inv after decrementing the pendinng invalidations
+    int dec_pending_inv(Block *_block);
+    void insert_evicted_block(Block *_block);
 };

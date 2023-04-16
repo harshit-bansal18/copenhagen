@@ -23,7 +23,8 @@ L1Cache: Private cache
 */
 
 class Cache {
-
+public:
+    virtual void lookup(Block*);
 };
 
 class L1Cache:public Cache {
@@ -72,6 +73,7 @@ public:
     OTT *ott;
     pending_msgs *pending_msgs_buffer;
     trace_buffer *miss_trace_buffer;
+
 
     L1Cache();
     void lookup(Block *_block);

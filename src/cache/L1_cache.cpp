@@ -12,7 +12,7 @@ L1Cache::L1Cache() {
     upgrade_misses = 0;
     accesses = 0;
     ott = new OTT();
-    buffer = new bufferl1();
+
 }
 
 void L1Cache::lookup(Block *_block) {
@@ -100,8 +100,8 @@ int L1Cache::get_target_way(int index) {
 
 void L1Cache::get_block(unsigned long long addr,
             Block *dst) {
-    dst->addr = addr;  
-    addr = addr >> no_block_bits;
+    // addr = addr >> no_block_bits;
+    dst->addr = addr;
     dst->index = addr & mask;
     dst->tag = addr >> no_index_bits;
 
