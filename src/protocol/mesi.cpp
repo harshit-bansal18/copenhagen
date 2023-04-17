@@ -59,8 +59,6 @@ void Mesi::perform_ott_entry_removal(int core){
             tr_queue.pop();
         }
 
-        //[jme]
-
         l1_caches[core]->miss_trace_buffer->buffer.erase(l1_block->addr);
         l1_caches[core]->ott->remove_entry(l1_block->addr);
     }
@@ -123,7 +121,6 @@ void Mesi::handle_put_L1(int core, state put_state, int expected_invalidations) 
     }
 
     perform_ott_entry_removal(core);
-    j
 
 ret:
     return;
@@ -175,7 +172,7 @@ void Mesi::handle_get_L1(int core, Msg* _msg, state final_state) {
     
     if(l1_caches[core]->ott->table.find(new_msg->addr) != l1_caches[core]->ott->table.end()){
         //send the inval request to pending requests
-        l1_caches[core]->pending_msgs_buffer[new_msg->addr] = *_msg;
+        l1_caches[core]->pending_msgs_buffer->buffer[new_msg->addr] = *_msg;
     }
     
     // If the block is not present in the cache, means evicted already.
@@ -200,20 +197,20 @@ void Mesi::handle_get_L1(int core, Msg* _msg, state final_state) {
 
 }
 
-void handle_UPGR_L1(int core, Msg* _msg, state final_state){
+void Mesi::handle_UPGR_L1(int core, Msg* _msg, state final_state){
     //similar to L1
-    Msg *new_msg_1, *new_msg_2;
+    Msg *new_msg, *new_msg_1, *new_msg_2;
     int requester_id = _msg->id;
 
     auto& table = l1_caches[core]->ott->table;
-    if(table.find(new_msg->addr) != table.end()){
+    if(table.find(_msg->addr) != table.end()){
         //send the inval request to pending requests
-        if(table[new_msg->addr]->_msg.type == UPGR || table[new_msg->addr]->_msg.type == GETX){
+        if(table[_msg->addr]->_msg.type == UPGR || table[_msg->addr]->_msg.type == GETX){
             //send home msg to roll_back
             new_msg_1 = make_msg_from_L1(l1_caches[core]->ID, _msg->addr, ROLL_BACK);
             l2_cache->queue_msg(new_msg_1, get_home_node(_msg->addr, l2_cache));
             //send nack to L2;
-            mew_msg_2 = make_msg_from_l1(l1_caches[core]->ID, _msg->addr, NACK);
+            new_msg_2 = make_msg_from_L1(l1_caches[core]->ID, _msg->addr, NACK);
             l1_caches[requester_id]->queue_msg(new_msg_2);
         }
     }
@@ -251,7 +248,7 @@ void Mesi::handle_INV_L1(int core, Msg* _msg){
     // for normal requests we don't need to do anything
     if(l1_caches[core]->ott->table.find(new_msg->addr) != l1_caches[core]->ott->table.end()){
         //send the inval request to pending requests
-        l1_caches[core]->pending_msgs_buffer[new_msg->addr] = *_msg;
+        l1_caches[core]->pending_msgs_buffer->buffer[new_msg->addr] = *_msg;
     }
     
     // if nacke ott entries present, then change the type of that ott entry
@@ -355,7 +352,7 @@ void Mesi::process_trace(Trace *trace_entry) {
             l2_cache->queue_msg(new_msg, home_node);
             
             //Create new OTT entry
-            Ott_entry* new_ott_entry = create_ott_entry(l2_cache->msgs[home_node].back(), l1_block, 0, false);
+            Ott_entry* new_ott_entry = create_ott_entry(l2_cache->msg_queues[home_node].back(), l1_block, 0, false);
             l1_cache->ott->add_entry(l1_block->addr, new_ott_entry);                        
 
         }
@@ -374,7 +371,7 @@ void Mesi::process_trace(Trace *trace_entry) {
     l2_cache->queue_msg(new_msg, home_node);
 
     //Create new OTT entry
-    new_ott_entry = create_ott_entry(l2_cache->msgs[home_node].back(), l1_block, 0, false);
+    new_ott_entry = create_ott_entry(l2_cache->msg_queues[home_node].back(), l1_block, 0, false);
     l1_cache->ott->add_entry(l1_block->addr, new_ott_entry); 
 
 
@@ -642,7 +639,7 @@ void Mesi::handle_upgr_L2(int bank_id, int source_core) {
             return;    
         }
         /*******************************/
-        l2_block->dir_entry.curr_state = UNOWNED;j
+        l2_block->dir_entry.curr_state = UNOWNED;
         l2_cache->copy(l2_block);
         l2_cache->update_repl_params(l2_block->index, l2_block->way);
         handle_victim_L2(bank_id, source_core);
@@ -651,7 +648,6 @@ void Mesi::handle_upgr_L2(int bank_id, int source_core) {
     /***********SERVING UPGR REQUEST NOW**********************/
     // Now the block is there
     switch(l2_block->dir_entry.curr_state) {
-    handle_nacke
     // Treat UPGR request as GETX.
     case UNOWNED:
         l2_cache->set_directory_state(MODIFIED, l2_block->index, l2_block->way);

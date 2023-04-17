@@ -19,6 +19,7 @@ typedef enum {
    NACK,
    NACKE,
    WB_ACK,
+   ROLL_BACK,
 }msg_type;
 
 typedef enum {
