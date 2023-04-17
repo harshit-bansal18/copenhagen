@@ -64,8 +64,9 @@ public:
 
    void handle_put_L1(int core, state put_states, int expected_invalidations = 0);
    void handle_put_L1_inv_ack(int core, state put_state);
-   void handle_get_L1(int core, int requester_id, state final_state);
-   void handle_INV_L1(int core, int source_id, int cache_type);
+   void handle_get_L1(int core, Msg* _msg, state final_state);
+   void handle_UPGR_L1(int core, Msg* _msg, state final_state);
+   void handle_INV_L1(int core, Msg* _msg);
    void handle_NACK_L1(int core);
    void handle_NACKE_L1(int core);
    void handle_INV_ACK_L1(int core);

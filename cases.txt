@@ -12,3 +12,9 @@ cancel the Upgr request, invalidate the block, send INV_ACK, change Upgr request
 WB-Inv race:
 If L2 Block gets evicted in Modified state, sends inv to L1 owner, and owner also evicts the block. Then on recieving first WB, L2 will completetely
 drop the block. L1 will ignore the INV.
+
+
+Upgr-Upgr race:
+L1-L1 deadlock, one waiting for inval-ack while having a pending request of Upgr and other waiting for putx, while having a pending request for inval.
+
+To handle: send a nack from p1 to p2 and a roll back request from p1 to home. when nack send, process pending msgs.
