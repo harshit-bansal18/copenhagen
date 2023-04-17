@@ -62,6 +62,7 @@ public:
    void process_trace(Trace *_trace);
 
    void perform_ott_entry_removal(int core);
+   void handle_pending_msgs(int core);
 
    void handle_put_L1(int core, state put_states, int expected_invalidations = 0);
    void handle_put_L1_inv_ack(int core, state put_state);

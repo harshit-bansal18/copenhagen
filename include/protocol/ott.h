@@ -20,6 +20,7 @@ struct Ott_entry{
 typedef struct Ott_entry Ott_entry;
 
 Ott_entry* create_ott_entry(Msg* msg, Block* _block, int pi, bool hmr);
+void update_ott_entry(L1Cache* l1_cache, unsigned long long addr, bool hmr, int inval_exp);
 
 class OTT{
 public:
@@ -37,7 +38,7 @@ public:
 
 class pending_msgs{
 public:
-    map<unsigned long long, Msg> buffer;
+    map<unsigned long long, queue<Msg>> buffer;
 };
 
 class trace_buffer {
@@ -56,5 +57,4 @@ public:
 };
 
 
-void update_ott_entry(L1Cache* l1_cache, unsigned long long addr, bool hmr, int inval_exp);
 //add functions for updating vales of ott entries

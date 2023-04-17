@@ -6,6 +6,7 @@
 #include<cache/L2_cache.h>
 #include<specs.h>
 #include<protocol/mesi.h>
+#include<protocol/ott.h>
 
 using namespace std;
 

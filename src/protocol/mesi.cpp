@@ -43,6 +43,8 @@ void Mesi::perform_ott_entry_removal(int core){
     state curr_state = l1_block->block_state;
     Ott_entry* new_ott_entry;
     if(curr_state == MODIFIED){
+        handle_pending_msgs(core);
+
         l1_caches[core]->miss_trace_buffer->buffer.erase(l1_block->addr);
         l1_cache->ott->remove_entry(l1_block->addr);
 
@@ -58,9 +60,12 @@ void Mesi::perform_ott_entry_removal(int core){
             }
             tr_queue.pop();
         }
+        handle_pending_msgs(core);
 
         l1_caches[core]->miss_trace_buffer->buffer.erase(l1_block->addr);
         l1_caches[core]->ott->remove_entry(l1_block->addr);
+
+        
     }
     else{
         queue<Trace*>& tr_queue = l1_caches[core]->miss_trace_buffer->buffer[l1_block->addr];
@@ -76,11 +81,89 @@ void Mesi::perform_ott_entry_removal(int core){
             l1_caches[core]->miss_trace_buffer->buffer[temp_l1_block->addr].push(tr_queue.front());
             tr_queue.pop();
         }
+        handle_pending_msgs(core);
+
         l1_caches[core]->miss_trace_buffer->buffer.erase(l1_block->addr);
         l1_cache->ott->remove_entry(l1_block->addr);
+
     }
 }
 
+
+void Mesi::handle_pending_msgs(int core){
+    int home_node;
+    Msg *new_msg;
+    L1Cache *l1_cache = l1_caches[core];
+    home_node = get_home_node(l1_block->addr, l2_cache);
+
+    if(l1_cache->ott->check_entry(l1_block->addr)){
+        Ott_entry* ott_entry = l1_cache->ott->table[l1_block->addr];
+        queue<Msg>& pending_queue =  l1_cache->pending_msgs_buffer->buffer[l1_block->addr];
+        if(ott_entry->_msg.type == GET){
+            while(!pending_queue.empty()){
+                Msg temp_msg = pending_queue.front();
+                pending_queue.pop();
+
+                if(temp_msg.type == INV){
+                    l1_cache->lookup(l1_block);
+                    l1_cache->invalidate(l1_block);
+
+                    new_msg = make_msg_from_L1(core, l1_block->addr, INV_ACK);
+                    l1_caches[temp_msg.id]->queue_msg(new_msg);
+                }
+
+                assert(temp_msg.type == GET);
+                assert(temp_msg.type == GETX);
+            }
+        }
+
+        if(ott_entry->_msg.type == GETX){
+            // no penidng requests can come at this stage
+            // while(!pending_queue.empty()){
+            //     Msg temp_msg = pending_queue.front();
+            //     pending_queue.pop();
+
+            //     if(temp_msg.type == INV){
+            //         l1_cache->lookup(l1_block);
+            //         l1_cache->invalidate(l1_block);
+
+            //         new_msg = make_msg_from_L1(core, l1_block->addr, INV_ACK);
+            //         l1_caches[temp_msg.id]->queue_msg(new_msg);
+            //     }
+
+            //     if(temp_msg.type == GET){
+
+            //     }
+
+            //     if(temp_msg.type == GETX){
+
+            //     }
+            // }
+
+            assert(pending_queue.empty());
+        }
+
+        if(ott_entry->_msg.type == UPGR){
+            while(!pending_queue.empty()){
+                Msg temp_msg = pending_queue.front();
+                pending_queue.pop();
+
+                if(temp_msg.type == INV){
+                    l1_cache->lookup(l1_block);
+                    l1_cache->invalidate(l1_block);
+
+                    new_msg = make_msg_from_L1(core, l1_block->addr, INV_ACK);
+                    l1_caches[temp_msg.id]->queue_msg(new_msg);
+                }
+
+                //need to verify this
+                assert(temp_msg.type == GET);
+                //need to verify this
+                assert(temp_msg.type == GETX);
+            }
+        }
+    }
+}
 
 //UPGR handling
 void Mesi::handle_put_L1(int core, state put_state, int expected_invalidations) {
@@ -172,7 +255,7 @@ void Mesi::handle_get_L1(int core, Msg* _msg, state final_state) {
     
     if(l1_caches[core]->ott->table.find(new_msg->addr) != l1_caches[core]->ott->table.end()){
         //send the inval request to pending requests
-        l1_caches[core]->pending_msgs_buffer->buffer[new_msg->addr] = *_msg;
+        l1_caches[core]->pending_msgs_buffer->buffer[new_msg->addr].push(*_msg);
     }
     
     // If the block is not present in the cache, means evicted already.
@@ -248,7 +331,7 @@ void Mesi::handle_INV_L1(int core, Msg* _msg){
     // for normal requests we don't need to do anything
     if(l1_caches[core]->ott->table.find(new_msg->addr) != l1_caches[core]->ott->table.end()){
         //send the inval request to pending requests
-        l1_caches[core]->pending_msgs_buffer->buffer[new_msg->addr] = *_msg;
+        l1_caches[core]->pending_msgs_buffer->buffer[new_msg->addr].push(*_msg);
     }
     
     // if nacke ott entries present, then change the type of that ott entry

@@ -1,8 +1,13 @@
 #pragma once
 #include<simulator.h>
 
-Simulator::Simulator(string f_name){
+static inline int get_home_node(unsigned long long addr, L2Cache *l2_cache) {
+    int node;
+    node = addr & l2_cache->bank_mask;
+    return node;
+}
 
+Simulator::Simulator(string f_name){
     for(int i = 0; i < THREAD_COUNT; i++){
         string new_f_name = f_name + "." + to_string(i);
         f_traces[i].open(new_f_name.c_str(), ios::in);
@@ -28,6 +33,7 @@ Simulator::Simulator(string f_name){
     tmp_msg2_queue.resize(THREAD_COUNT);
 }   
 
+//TODO: update it to include pending msgs and ott check
 bool Simulator::end_condition(bool started){
     bool l1_trace_empty = true;
     bool l1_msg_empty = true;
@@ -66,6 +72,17 @@ void Simulator::execute_part2(){
 void Simulator::start_simulator(){
     bool started = false;
     while(1){
+        // nack handling done
+        // TODO: handle pending msgs over here
+        for(int i = 0; i < THREAD_COUNT; i++){
+            l1_caches[i]->ott->decrement_timer();
+            vector<Ott_entry*>& reprocess_traces = l1_caches[i]->ott->nackTimer.front();
+            for(Ott_entry* ott_entry: reprocess_traces){
+                Msg* new_msg = new Msg(ott_entry->_msg);
+                l2_cache->queue_msg(new_msg, get_home_node(new_msg->addr, l2_cache));
+            }
+        }
+
         if(end_condition(started)) break;
         //posting trace entries to queue and find one trace to process;
         for(int i = 0; i < THREAD_COUNT; i++){
