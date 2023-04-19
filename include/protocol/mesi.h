@@ -1,7 +1,15 @@
-#pragma once
+#ifndef __MESI_H__
+#define __MESI_H__
+
 #include<bitset>
-#include <cache/L1_cache.h>
-#include <cache/L2_cache.h>
+#ifndef __L1_CACHE_H__
+   #include <cache/L1_cache.h>
+#endif
+
+#ifndef __L2_CACHE_H__
+   #include <cache/L2_cache.h>
+#endif
+
 #include <protocol/ott.h>
 
 typedef enum {
@@ -19,7 +27,8 @@ typedef enum {
    NACK,
    NACKE,
    WB_ACK,
-   ROLL_BACK,
+
+   NUM_MSG_TYPES
 }msg_type;
 
 typedef enum {
@@ -89,3 +98,5 @@ public:
    void handle_inv_ack_L2(int bank_id, int source_core);
    void handle_victim_L2(int bank_id, int source_core); 
 };
+
+#endif

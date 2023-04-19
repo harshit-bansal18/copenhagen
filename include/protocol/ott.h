@@ -1,7 +1,9 @@
-#pragma once 
+#ifndef __OTT_H__
+#define __OTT_H__
+
 #include <iostream>
 #include <vector>
-#include <mesi.h>
+#include <protocol/mesi.h>
 #include <cache/L1_cache.h>
 #include <map>
 #include <queue>
@@ -59,3 +61,5 @@ public:
 
 
 //add functions for updating vales of ott entries
+
+#endif

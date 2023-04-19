@@ -1,11 +1,11 @@
-#pragma once
+#ifndef __L2_CACHE_H__
+#define __L2_CACHE_H__
 
-#include <set.h>
+#include <cache/L1_cache.h>
 #include <specs.h>
 #include <utils.h>
 #include <trace.h>
 #include <protocol/mesi.h>
-#include <cache/L1_cache.h>
 
 using namespace std;
 
@@ -42,7 +42,7 @@ L2Cache: Shared cache
 *******************************************
 */
 
-class L2Cache: public Cache {
+class L2Cache {
     vector<Set*> sets;
 public:
     #ifdef L2_ASSOC
@@ -75,6 +75,7 @@ public:
     Block *victim;
     policy repl_policy;
     vector<queue<Msg *>> msg_queues;
+    vector<vector<unsigned long >> num_msgs;
     evicted_blocks *eb_buffer;
     L2Cache();
     void lookup(Block *_block);
@@ -97,3 +98,5 @@ public:
     int dec_pending_inv(Block *_block);
     void insert_evicted_block(Block *_block, int num_inval);
 };
+
+#endif

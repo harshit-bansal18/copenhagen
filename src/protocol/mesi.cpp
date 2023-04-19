@@ -636,6 +636,7 @@ void Mesi::process_trace(Trace *trace_entry) {
 
     l1_cache->lookup(l1_block);
     if(l1_block->valid){
+        l1_cache->update_repl_params(l1_block->index, l1_block->way);
         if(trace_entry->request == 'r')
             goto l1_ret;
         
@@ -652,8 +653,7 @@ void Mesi::process_trace(Trace *trace_entry) {
             goto l1_ret;
         }
         if (l1_block->block_state == SHARED) {
-            
-
+            l1_cache->upgrade_misses++;
             home_node = get_home_node(l1_block->addr, l2_cache);
             new_msg =  make_msg_from_L1(core, l1_block->addr, UPGR);
             l2_cache->queue_msg(new_msg, home_node);
@@ -683,7 +683,7 @@ void Mesi::process_trace(Trace *trace_entry) {
 
 
 l1_ret:
-    l1_block->block_state = INVALID;
+    l1_block->block_state = process_traceINVALID;
     l1_block->valid = false;
 
 }
@@ -695,6 +695,8 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
     L1Cache *l1_cache = l1_caches[core];
     
     l1_cache->get_block(_msg->addr, l1_block);
+
+    l1_cache->num_msgs[_msg->type]++;
 
     switch(_msg->type) {
     
@@ -750,8 +752,9 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
 void Mesi::process_l2_msg(Msg *_msg, int bank_id) {
     l2_cache->get_block(_msg->addr, l2_block);
     l2_cache->lookup(l2_block);
-    
-    
+
+    l2_cache->num_msgs[bank_id][_msg->type]++;
+
     switch(_msg->type) {
     
     case GET:

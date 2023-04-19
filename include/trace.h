@@ -1,4 +1,6 @@
-#pragma once
+#ifndef __TRACE_H__
+#define __TRACE_H__
+
 #include<iostream>
 
 #define READ 'r'
@@ -13,3 +15,5 @@ public:
     
     Trace();
 };
+
+#endif

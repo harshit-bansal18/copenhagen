@@ -1,7 +1,8 @@
 #include <cache/L1_cache.h>
 
-L1Cache::L1Cache() {
+L1Cache::L1Cache(int id) {
     int i=0;
+    ID = id;
     sets.resize(no_sets);
 
     for(i; i < no_sets; i++){
@@ -11,6 +12,8 @@ L1Cache::L1Cache() {
     misses = 0;
     upgrade_misses = 0;
     accesses = 0;
+    num_msgs.resize(NUM_MSG_TYPES + 1);
+    victim = NULL;
     ott = new OTT();
 
 }

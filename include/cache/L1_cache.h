@@ -1,10 +1,12 @@
-#pragma once
-#include <set.h>
+#ifndef __L1_CACHE_H__
+#define __L1_CACHE_H__
+
 #include <specs.h>
 #include <utils.h>
 #include <trace.h>
 #include <protocol/mesi.h>
 #include <protocol/ott.h>
+#include <cache/set.h>
 
 using namespace std;
 
@@ -22,12 +24,12 @@ L1Cache: Private cache
 *******************************************
 */
 
-class Cache {
-public:
-    virtual void lookup(Block*);
-};
+// class Cache {
+// public:
+//     virtual void lookup(Block*);
+// };
 
-class L1Cache:public Cache {
+class L1Cache {
     // cannot allow direct access to cache blocks
     vector<Set *> sets;
 public:
@@ -74,8 +76,10 @@ public:
     pending_msgs *pending_msgs_buffer;
     trace_buffer *miss_trace_buffer;
 
+    // Stats
+    vector<unsigned long> num_msgs; 
 
-    L1Cache();
+    L1Cache(int id);
     void lookup(Block *_block);
     void invalidate(Block *_block);
     int invoke_repl_policy(int index);
@@ -91,3 +95,5 @@ public:
     void insert_to_pending(Msg *_msg);
     Ott_entry* find_ott_entry(unsigned long long addr);
 };
+
+#endif

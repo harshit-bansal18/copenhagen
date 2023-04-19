@@ -7,6 +7,11 @@ L2Cache::L2Cache() {
     sets.resize(this->no_sets);
     for(int i=0; i < this->no_sets; i++)
         sets[i] = new Set(no_ways);
+    
+    victim = NULL;
+    num_msgs.resize(BANKS);
+    for (int i=0; i < BANKS; i++)
+        num_msgs[i].resize(NUM_MSG_TYPES+1);
 }
 
 void L2Cache::lookup(Block *_block) {

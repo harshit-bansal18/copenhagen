@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __SET_H__
+#define __SET_H__
 
 #include <vector>
 #include <replacement.h>
@@ -31,3 +32,5 @@ class Set {
     Set(int _ways);
 
 };
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef __SPECS_H__
+#define __SPECS_H__
+
 #define KB *1024
 #define MB *1024*1024
 
@@ -14,3 +17,5 @@
 #define THREAD_COUNT 8
 #define MAX_TRACE_QUEUE_SIZE 5
 #define BLOCK_BITS 6
+
+#endif
