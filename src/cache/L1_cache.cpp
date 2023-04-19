@@ -122,3 +122,14 @@ void L1Cache::set_block_state(int index, int way, state new_state) {
 void L1Cache::queue_msg(Msg *_msg) {
     msgs.push(_msg);
 }
+
+void L1Cache::insert_to_pending(Msg *_msg){
+    pending_msgs_buffer->buffer[_msg->addr].push(*_msg);
+}
+
+Ott_entry* L1Cache::find_ott_entry(unsigned long long addr){
+    if(ott->check_entry(addr)){
+        return ott->table[addr];
+    }
+    return nullptr;
+}

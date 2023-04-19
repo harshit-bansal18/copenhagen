@@ -61,19 +61,26 @@ public:
    void process_l2_msg(Msg *_msg, int bank_id);
    void process_trace(Trace *_trace);
 
+   bool check_ott_invalid(int core, unsigned long long addr);
    void perform_ott_entry_removal(int core);
    void handle_pending_msgs(int core);
 
-   void handle_put_L1(int core, state put_states, int expected_invalidations = 0);
+   void handle_put_L1(int core, int expected_invalidations = 0);
+   void handle_putx_L1(int core,  int expected_invalidations = 0);
+   void handle_pute_L1(int core,  int expected_invalidations = 0);
+
    void handle_put_L1_inv_ack(int core, state put_state);
-   void handle_get_L1(int core, Msg* _msg, state final_state);
+   void handle_victim_L1(int core);
+   void handle_get_L1(int core, Msg* _msg);
+   void handle_getx_L1(int core, Msg* _msg);
    void handle_UPGR_L1(int core, Msg* _msg, state final_state);
    void handle_INV_L1(int core, Msg* _msg);
-   void handle_NACK_L1(int core);
-   void handle_NACKE_L1(int core);
+   void handle_NACK_L1(int core, Msg *_msg);
+   void handle_NACKE_L1(int core, Msg *_msg);
    void handle_INV_ACK_L1(int core);
-   void handle_UPGR_ACK_L1(int core);
+   void handle_UPGR_ACK_L1(int core, int expected_invalidations = 0);
    void handle_WB_ACK_L1(int core);
+
    void handle_get_L2(int bank_id, int source_core);
    void handle_getx_L2(int bank_id, int source_core);
    void handle_upgr_L2(int bank_id, int source_core);

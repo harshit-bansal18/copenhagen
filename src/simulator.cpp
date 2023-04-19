@@ -1,14 +1,17 @@
 #pragma once
-#include<simulator.h>
+#include <simulator.h>
 
-static inline int get_home_node(unsigned long long addr, L2Cache *l2_cache) {
+static inline int get_home_node(unsigned long long addr, L2Cache *l2_cache)
+{
     int node;
     node = addr & l2_cache->bank_mask;
     return node;
 }
 
-Simulator::Simulator(string f_name){
-    for(int i = 0; i < THREAD_COUNT; i++){
+Simulator::Simulator(string f_name)
+{
+    for (int i = 0; i < THREAD_COUNT; i++)
+    {
         string new_f_name = f_name + "." + to_string(i);
         f_traces[i].open(new_f_name.c_str(), ios::in);
     }
@@ -18,7 +21,7 @@ Simulator::Simulator(string f_name){
         l1_caches[i] = new L1Cache();
 
     l2_cache = new L2Cache();
-    
+
     l1_block = new Block();
     l2_block = new Block();
 
@@ -31,18 +34,22 @@ Simulator::Simulator(string f_name){
 
     tmp_msg1_queue.resize(THREAD_COUNT);
     tmp_msg2_queue.resize(THREAD_COUNT);
-}   
+}
 
 //TODO: update it to include pending msgs and ott check
-bool Simulator::end_condition(bool started){
+bool Simulator::end_condition(bool started)
+{
     bool l1_trace_empty = true;
     bool l1_msg_empty = true;
-    for(int i = 0; i < THREAD_COUNT; i++){
-        if(!l1_caches[i]->empty_trace_queue()){
+    for (int i = 0; i < THREAD_COUNT; i++)
+    {
+        if (!l1_caches[i]->empty_trace_queue())
+        {
             l1_trace_empty = false;
             break;
-        } 
-        if(!l1_caches[i]->empty_msg_queue()){
+        }
+        if (!l1_caches[i]->empty_msg_queue())
+        {
             l1_msg_empty = false;
             break;
         }
@@ -52,76 +59,99 @@ bool Simulator::end_condition(bool started){
 }
 
 // TODO
-Trace* process_trace_line(string trace_line){
+Trace *process_trace_line(string trace_line)
+{
     //to complete;
+    Trace *trace = new Trace();
+    stringstream trace_line_ss(trace_line);
+    trace_line_ss >> trace->thread_id >> trace->address >> trace->request >> trace->global_id;
+    trace->address >>= BLOCK_BITS;
+
+    return trace;
 }
 
-void Simulator::execute_part2(){
-    if(tmp_trace != nullptr)
+void Simulator::execute_part2()
+{
+    if (tmp_trace != nullptr)
         mesi->process_trace(tmp_trace);
 
-    for(int i = 0 ; i < THREAD_COUNT; i++){
-        if(tmp_msg1_queue[i] != nullptr) 
+    for (int i = 0; i < THREAD_COUNT; i++)
+    {
+        if (tmp_msg1_queue[i] != nullptr)
             mesi->process_l1_msg(tmp_msg1_queue[i], i);
-        if(tmp_msg2_queue[i] != nullptr) 
+        if (tmp_msg2_queue[i] != nullptr)
             mesi->process_l2_msg(tmp_msg2_queue[i], i);
     }
-    
 }
 
-void Simulator::start_simulator(){
+void Simulator::start_simulator()
+{
     bool started = false;
-    while(1){
+    while (1)
+    {
         // nack handling done
         // TODO: handle pending msgs over here
-        for(int i = 0; i < THREAD_COUNT; i++){
+        for (int i = 0; i < THREAD_COUNT; i++)
+        {
             l1_caches[i]->ott->decrement_timer();
-            vector<Ott_entry*>& reprocess_traces = l1_caches[i]->ott->nackTimer.front();
-            for(Ott_entry* ott_entry: reprocess_traces){
-                Msg* new_msg = new Msg(ott_entry->_msg);
+            vector<Ott_entry *> &reprocess_traces = l1_caches[i]->ott->nackTimer.front();
+            for (Ott_entry *ott_entry : reprocess_traces)
+            {
+                Msg *new_msg = new Msg(ott_entry->_msg);
+                ott_entry->invalid = false;
                 l2_cache->queue_msg(new_msg, get_home_node(new_msg->addr, l2_cache));
             }
         }
-
-        if(end_condition(started)) break;
+        if (end_condition(started))
+            break;
         //posting trace entries to queue and find one trace to process;
-        for(int i = 0; i < THREAD_COUNT; i++){
+        for (int i = 0; i < THREAD_COUNT; i++)
+        {
             tmp_trace = nullptr;
-            queue<Trace *>& ti = l1_caches[i]->trace_input;
-            auto change_trace = [&](){
-                if(!ti.empty() && ti.front()->global_id == global_counter_to_process){
+            queue<Trace *> &ti = l1_caches[i]->trace_input;
+            auto change_trace = [&]()
+            {
+                if (!ti.empty() && ti.front()->global_id == global_counter_to_process)
+                {
                     tmp_trace = ti.front();
                     ti.pop();
                 }
             };
-            if(ti.size() >= MAX_TRACE_QUEUE_SIZE){
+            if (ti.size() >= MAX_TRACE_QUEUE_SIZE)
+            {
                 change_trace();
                 continue;
             };
             string trace_line;
-            if(!getline(f_traces[i], trace_line)){
+            if (!getline(f_traces[i], trace_line))
+            {
                 change_trace();
                 continue;
-            };    
-            Trace* trace = process_trace_line(trace_line);
+            };
+            Trace *trace = process_trace_line(trace_line);
             ti.push(trace);
             change_trace();
         }
 
         //finding head of all input queues to l1 and l2
-        for(int i = 0; i < THREAD_COUNT; i++){
-            auto& l1_msgs = l1_caches[i]->msgs;
-            auto& l2_msgs = l2_cache->msg_queues[i];
-            if(!l1_msgs.empty()){
+        for (int i = 0; i < THREAD_COUNT; i++)
+        {
+            auto &l1_msgs = l1_caches[i]->msgs;
+            auto &l2_msgs = l2_cache->msg_queues[i];
+            if (!l1_msgs.empty())
+            {
                 tmp_msg1_queue[i] = l1_msgs.front();
                 l1_msgs.pop();
             }
-            else tmp_msg1_queue[i] = nullptr;
-            if(l2_msgs.empty()){
+            else
+                tmp_msg1_queue[i] = nullptr;
+            if (l2_msgs.empty())
+            {
                 tmp_msg2_queue[i] = l2_msgs.front();
                 l2_msgs.pop();
             }
-            else tmp_msg2_queue[i] = nullptr;
+            else
+                tmp_msg2_queue[i] = nullptr;
         }
 
         //PART 2
@@ -131,4 +161,3 @@ void Simulator::start_simulator(){
         free(tmp_trace);
     }
 }
-

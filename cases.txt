@@ -18,3 +18,5 @@ Upgr-Upgr race:
 L1-L1 deadlock, one waiting for inval-ack while having a pending request of Upgr and other waiting for putx, while having a pending request for inval.
 
 To handle: send a nack from p1 to p2 and a roll back request from p1 to home. when nack send, process pending msgs.
+
+WB-INV: Currently ignoring the INV when the OTT entry has msg type of WB

@@ -88,4 +88,6 @@ public:
     bool empty_msg_queue();
     void set_block_state(int index, int way, state new_state);
     void queue_msg(Msg *_msg);
+    void insert_to_pending(Msg *_msg);
+    Ott_entry* find_ott_entry(unsigned long long addr);
 };

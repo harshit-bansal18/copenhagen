@@ -7,6 +7,7 @@ Ott_entry* create_ott_entry(Msg* msg, Block* _block, int pi, bool hmr){
     new_entry->_block = *_block;
     new_entry->pending_invals = pi;
     new_entry->home_msg_received = hmr;
+    new_entry->invalid = false;
     return new_entry;
 }
 

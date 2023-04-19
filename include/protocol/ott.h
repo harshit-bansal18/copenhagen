@@ -15,6 +15,7 @@ struct Ott_entry{
     Block _block;
     int pending_invals;
     bool home_msg_received;
+    bool invalid;
 };
 
 typedef struct Ott_entry Ott_entry;
