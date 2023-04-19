@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <bitset>
-#include <protocol/mesi.h>
+#include <simulator.h>
 
 using namespace std;
 
@@ -407,7 +407,7 @@ void Mesi::handle_UPGR_L1(int core, Msg* _msg, state final_state){
         //send the inval request to pending requests
         if(ott_entry->_msg.type == UPGR || ott_entry->_msg.type == GETX){
             //send home msg to roll_back
-            new_msg_1 = make_msg_from_L1(l1_caches[core]->ID, _msg->addr, ROLL_BACK);
+            new_msg_1 = make_msg_from_L1(l1_caches[core]->ID, _msg->addr, NACK); /// ROLL_BACK
             l2_cache->queue_msg(new_msg_1, get_home_node(_msg->addr, l2_cache));
             //send nack to L2;
             new_msg_2 = make_msg_from_L1(l1_caches[core]->ID, _msg->addr, NACK);
@@ -618,6 +618,8 @@ static inline int get_owner(bitset<CORES> bitvec) {
 
 void Mesi::process_trace(Trace *trace_entry) {
     L1Cache *l1_cache;
+//    log("Thread id: " << trace_entry->thread_id << ", Address: " << trace_entry->address << ", global count: " << trace_entry->global_id);
+//    log((trace_entry->address << 6));
     int core = trace_entry->thread_id;
     int home_node;
     unsigned long long shifted_addr;
@@ -630,6 +632,7 @@ void Mesi::process_trace(Trace *trace_entry) {
 
     //check ott entry
     if(l1_cache->ott->check_entry(shifted_addr)){
+//        log("ott entry present");
         l1_cache->miss_trace_buffer->buffer[shifted_addr].push(trace_entry);
         goto l1_ret;
     }
@@ -665,6 +668,7 @@ void Mesi::process_trace(Trace *trace_entry) {
         }
         goto l1_ret;
     }
+//    log("l1 miss");
     // We have a L1 miss. Now we need to request block from home.
     l1_cache->misses++;
 
@@ -676,14 +680,16 @@ void Mesi::process_trace(Trace *trace_entry) {
         new_msg = make_msg_from_L1(core, l1_block->addr, GETX);
 
     l2_cache->queue_msg(new_msg, home_node);
-
+//    log("after l2 queue");
     //Create new OTT entry
     new_ott_entry = create_ott_entry(l2_cache->msg_queues[home_node].back(), l1_block, 0, false);
-    l1_cache->ott->add_entry(l1_block->addr, new_ott_entry); 
-
+//    log("after create ott");
+    l1_cache->ott->add_entry(l1_block->addr, new_ott_entry);
+//    log("after ott add");
 
 l1_ret:
-    l1_block->block_state = process_traceINVALID;
+//    log("process trace finished");
+    l1_block->block_state = INVALID;
     l1_block->valid = false;
 
 }

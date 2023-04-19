@@ -12,8 +12,6 @@ public:
     char request;
     unsigned long long address;
     long long global_id;
-    
-    Trace();
 };
 
 #endif

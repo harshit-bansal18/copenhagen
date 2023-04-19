@@ -1,4 +1,3 @@
-#pragma once
 
 #include <replacement.h>
 #include <unistd.h>

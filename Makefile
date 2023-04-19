@@ -11,4 +11,4 @@ init5:
 
 
 clean:
-	rm -rf bin%
+	rm -f init5

@@ -1,115 +1,22 @@
+#ifndef __CACHE_H__
+#define __CACHE_H__
 
 #include <bits/stdc++.h>
+
+class Directory_entry;
+class Mesi;
+
+
+#ifndef __MESI_H__
+    #include "protocol/mesi.h"
+#endif
 
 
 #include <utils.h>
 #include <specs.h>
 #include <replacement.h>
-#include <trace.h>
 
 using namespace std;
-
-extern ofstream debug;
-
-class Directory_entry;
-class Mesi;
-class Msg;
-class Block;
-class Set;
-class OTT;
-class pending_msgs;
-class trace_buffer;
-class evicted_blocks;
-class L1Cache;
-class L2Cache;
-class Simulator;
-
-typedef enum {
-   GET,
-   GETX,
-   UPGR,
-   PUT,
-   PUTE,
-   PUTX,
-   INV,
-   SWB,
-   WB,
-   INV_ACK,
-   UPGR_ACK,
-   NACK,
-   NACKE,
-   WB_ACK,
-
-   NUM_MSG_TYPES
-}msg_type;
-
-typedef enum {
-   MODIFIED,
-   EXCLUSIVE,
-   SHARED,
-   INVALID,
-   PSH,
-   PDEX,
-   UNOWNED,
-}state;
-
-class Msg {
-public:
-   // source
-   int cache;
-   int id;
-   unsigned long long addr;
-   msg_type type;
-   int expected_invalidations;
-};
-
-class Directory_entry{
-public:
-   std::bitset<8> sharer;
-   state curr_state;
-};
-
-// Define a state machine for MESI protocol
-
-class Mesi {
-public:
-   std::vector<L1Cache *> l1_caches;
-   L2Cache *l2_cache;
-   Block *l1_block;
-   Block *l2_block;
-   Mesi();
-   void process_l1_msg(Msg *_msg, int core);
-   void process_l2_msg(Msg *_msg, int bank_id);
-   void process_trace(Trace *_trace);
-
-   bool check_ott_invalid(int core, unsigned long long addr);
-   void perform_ott_entry_removal(int core);
-   void handle_pending_msgs(int core);
-
-   void handle_put_L1(int core, int expected_invalidations = 0);
-   void handle_putx_L1(int core,  int expected_invalidations = 0);
-   void handle_pute_L1(int core,  int expected_invalidations = 0);
-
-   void handle_put_L1_inv_ack(int core, state put_state);
-   void handle_victim_L1(int core);
-   void handle_get_L1(int core, Msg* _msg);
-   void handle_getx_L1(int core, Msg* _msg);
-   void handle_UPGR_L1(int core, Msg* _msg, state final_state);
-   void handle_INV_L1(int core, Msg* _msg);
-   void handle_NACK_L1(int core, Msg *_msg);
-   void handle_NACKE_L1(int core, Msg *_msg);
-   void handle_INV_ACK_L1(int core);
-   void handle_UPGR_ACK_L1(int core, int expected_invalidations = 0);
-   void handle_WB_ACK_L1(int core);
-
-   void handle_get_L2(int bank_id, int source_core);
-   void handle_getx_L2(int bank_id, int source_core);
-   void handle_upgr_L2(int bank_id, int source_core);
-   void handle_swb_L2(int bank_id, int source_core);
-   void handle_wb_L2(int bank_id, int source_core);
-   void handle_inv_ack_L2(int bank_id, int source_core);
-   void handle_victim_L2(int bank_id, int source_core); 
-};
 
 class Block {
     public:
@@ -308,28 +215,4 @@ public:
     void insert_evicted_block(Block *_block, int num_inval);
 };
 
-class Simulator {
-public:
-    Block      *l1_block;
-    Block      *l2_block;
-    Block      *_victim;
-
-    vector<L1Cache*> l1_caches;
-    L2Cache* l2_cache;
-    
-    Mesi* mesi;
-
-    unsigned long long cycle_counter;
-    unsigned long long global_counter_to_process;
-
-    vector<fstream> f_traces;
-
-    Trace* tmp_trace;
-    vector<Msg*> tmp_msg1_queue;
-    vector<Msg*> tmp_msg2_queue;
-
-    Simulator(string f_name);
-    void execute_part2();
-    void start_simulator();
-    bool end_condition();
-};
+#endif

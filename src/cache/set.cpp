@@ -1,4 +1,4 @@
-#include <cache/set.h>
+#include <simulator.h>
 
 Block::Block() {
     index = -1;

@@ -1,16 +1,12 @@
 #ifndef __MESI_H__
 #define __MESI_H__
 
-#include<bitset>
-#ifndef __L1_CACHE_H__
-   #include <cache/L1_cache.h>
-#endif
+#include "trace.h"
+#include "cache/cache.h"
 
-#ifndef __L2_CACHE_H__
-   #include <cache/L2_cache.h>
-#endif
-
-#include <protocol/ott.h>
+class L1Cache;
+class L2Cache;
+class Block;
 
 typedef enum {
    GET,
@@ -53,7 +49,7 @@ public:
 
 class Directory_entry{
 public:
-   bitset<8> sharer;
+   std::bitset<8> sharer;
    state curr_state;
 };
 
@@ -61,7 +57,7 @@ public:
 
 class Mesi {
 public:
-   vector<L1Cache *> l1_caches;
+   std::vector<L1Cache *> l1_caches;
    L2Cache *l2_cache;
    Block *l1_block;
    Block *l2_block;

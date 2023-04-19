@@ -1,5 +1,4 @@
-#include<protocol/ott.h>
-
+#include <simulator.h>
 
 Ott_entry* create_ott_entry(Msg* msg, Block* _block, int pi, bool hmr){
     Ott_entry* new_entry = new Ott_entry;

@@ -1,4 +1,4 @@
-#include <cache/L2_cache.h>
+#include <simulator.h>
 
 
 L2Cache::L2Cache() {
@@ -113,7 +113,7 @@ void L2Cache::get_block(unsigned long long addr,
 
 bool L2Cache::empty_msg_queues() {
     bool ret = true;
-    for(auto q: msg_queues)
+    for(auto &q: msg_queues)
         ret = ret && q.empty();
 
     return ret;

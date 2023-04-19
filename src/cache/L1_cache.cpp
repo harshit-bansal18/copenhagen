@@ -1,4 +1,4 @@
-#include <cache/L1_cache.h>
+#include <simulator.h>
 
 L1Cache::L1Cache(int id) {
     int i=0;
@@ -16,6 +16,8 @@ L1Cache::L1Cache(int id) {
     victim = NULL;
     ott = new OTT();
 
+    miss_trace_buffer = new trace_buffer();
+    pending_msgs_buffer = new pending_msgs();
 }
 
 void L1Cache::lookup(Block *_block) {
@@ -111,7 +113,7 @@ void L1Cache::get_block(unsigned long long addr,
 }
 
 bool L1Cache::empty_msg_queue() {
-    return msgs.empty();
+    return (msgs.empty() && ott->table.empty());
 }
 
 bool L1Cache::empty_trace_queue() {
