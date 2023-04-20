@@ -188,9 +188,9 @@ void Mesi::handle_victim_L1(int core){
         }
         
         // Copenhegan: Too much copying here.
-        _victim = *l1_cache->victim;
-        delete l1_caches[core]->victim;
-        l1_cache->victim = NULL;
+//        _victim = *l1_cache->victim;
+//        delete l1_caches[core]->victim;
+//        l1_cache->victim = NULL;
         //
         // There wont be any writeback or msg sent to home node
         if (_victim.block_state == SHARED)
@@ -232,13 +232,18 @@ ret:
 
 
 void Mesi::handle_pute_L1(int core, int expected_invalidations) {
+//    log("Handle pute l1 started");
     Block _victim;
     Msg *new_msg;
     int home_node; 
-
+    log("Before assertion, address: " << l1_block->addr << " ,core: " << core);
+    assert(l1_caches[core]->ott->check_entry(l1_block->addr));
+    //Here the ott doesn't have the entry? why
     assert(l1_caches[core]->ott->table[l1_block->addr]->invalid == false);
-    
+
+    log("before setting block state");
     l1_block->block_state = EXCLUSIVE;
+    log("Before copy core: " << core);
     l1_caches[core]->copy(l1_block);
     l1_caches[core]->update_repl_params(l1_block->index, l1_block->way);
     log("Before victim");
