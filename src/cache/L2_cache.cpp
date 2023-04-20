@@ -1,5 +1,7 @@
 #include <simulator.h>
 
+extern map<msg_type, string> msg_names;
+extern map<state, string> state_names;
 
 L2Cache::L2Cache() {
     misses = 0;
@@ -12,6 +14,10 @@ L2Cache::L2Cache() {
     num_msgs.resize(BANKS);
     for (int i=0; i < BANKS; i++)
         num_msgs[i].resize(NUM_MSG_TYPES+1);
+
+    eb_buffer = new evicted_blocks();
+    eb_buffer->buffer.clear();
+
 }
 
 void L2Cache::lookup(Block *_block) {
@@ -19,13 +25,13 @@ void L2Cache::lookup(Block *_block) {
         if (sets[_block->index]->blocks[i].valid && sets[_block->index]->blocks[i].tag == _block->tag) {
             _block->way = i;
             // CHANGED IN COPENHEGAN
-            // Here dir_entry should be in sync with all the changes. Hence direct pointer is given
             _block->dir_entry = sets[_block->index]->blocks[i].dir_entry;
             //
             _block->valid = true;
             return;
         }
     }
+    _block->valid=false;
 }
 
 void L2Cache::invalidate(Block *_block) {
@@ -37,10 +43,14 @@ void L2Cache::invalidate(Block *_block) {
 void L2Cache::update_repl_params(int index, int way) {
     
     struct list_item *_item = sets[index]->repl_list.find_item(way);
+    log("find_item done");
     if (is_null(_item)) {
+        log("found null item");
         _item = (struct list_item*)malloc(sizeof(struct list_item));
         _item->way = way;
+        log("before add item");
         sets[index]->repl_list.add_item(_item);
+        log("add item done");
         return;
     }
     
@@ -74,29 +84,29 @@ int L2Cache::invoke_repl_policy(int index) {
 void L2Cache::copy(Block *_block) {
 
     _block->way = get_target_way(_block->index);
-
+    log("target way: " << _block->way);
     if (_block->way < 0) {
         _block->way = invoke_repl_policy(_block->index);
 
     }
 
-    sets[_block->index]->invalid_ways.erase(_block->way);
+//    sets[_block->index]->invalid_ways.erase(_block->way);
     _block->valid = 1; // to be sure
 
     // Copenhegan. Now dir_entry will also be copied
     sets[_block->index]->blocks[_block->way] = *_block;
+    log("L2 addr: " << sets[_block->index]->blocks[_block->way].addr << ": dir state: " << sets[_block->index]->blocks[_block->way].dir_entry.curr_state);
     //
-
-
 }
 
 int L2Cache::get_target_way(int index) {
-
-    if (sets[index]->invalid_ways.empty())
-        return -1;
-
-    return *sets[index]->invalid_ways.begin();
-
+    auto &_set = sets[index]->blocks;
+    for (int i =0; i < no_ways; i++){
+        if (!_set[i].valid){
+            return i;
+        }
+    }
+    return -1;
 }
 
 void L2Cache::get_block(unsigned long long addr,
@@ -120,27 +130,39 @@ bool L2Cache::empty_msg_queues() {
 }
 
 void L2Cache::queue_msg(Msg *_msg, int bank) {
+    log(msg_names[_msg->type]);
+    log(bank);
     msg_queues[bank].push(_msg);
 }
 
 void L2Cache::set_directory_state(state dir_state, int index, int way) {
+    auto &dir = sets[index]->blocks[way].dir_entry;
+
+    log("addr: " << sets[index]->blocks[way].addr << ": prev state: " << state_names[dir.curr_state]);
+
     sets[index]->blocks[way].dir_entry.curr_state = dir_state;
+    log("addr: " << sets[index]->blocks[way].addr << ": new state: " << state_names[dir.curr_state]);
+
 }
 
 void L2Cache::set_sharers(vector<int> &sharers, int index, int way) {
-    auto bitvec =  &sets[index]->blocks[way].dir_entry.sharer;
-    bitvec->reset();
+    auto &bitvec =  sets[index]->blocks[way].dir_entry.sharer;
+    bitvec.reset();
     for(auto i : sharers)
         bitvec[i] = true;
-    
+
+    log( "addr: " << sets[index]->blocks[way].addr  << " dir state: " << sets[index]->blocks[way].dir_entry.curr_state);
+
 }
 
 void L2Cache::set_owner(int owner, int index, int way) {
-    auto bitvec =  &sets[index]->blocks[way].dir_entry.sharer;
+    auto &bitvec =  sets[index]->blocks[way].dir_entry.sharer;
     int mask = 1;
-    bitvec->reset();
+    bitvec.reset();
     for (int i = 0; i < 8; i++, mask *=2)
         bitvec[i] = owner & mask;
+
+    log( "addr: " << sets[index]->blocks[way].addr << " owner: " << bitvec.to_ulong()  << " dir state: " << sets[index]->blocks[way].dir_entry.curr_state);
 }
 
 void L2Cache::add_sharer(int _sharer, int index, int way) {

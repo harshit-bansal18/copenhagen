@@ -4,6 +4,9 @@
 
 using namespace std;
 
+extern map<msg_type, string> msg_names;
+extern map<state, string> state_names;
+
 Mesi::Mesi() {
     l1_block = new Block();
     l2_block = new Block();
@@ -42,13 +45,13 @@ bool Mesi::check_ott_invalid(int core, unsigned long long addr){
     return ott_entry->invalid;
 }
 
-
 void Mesi::perform_ott_entry_removal(int core){
     int home_node;
     Msg *new_msg;
     L1Cache *l1_cache = l1_caches[core];
     Block* temp_l1_block;
     state curr_state = l1_block->block_state;
+    log("curr_state " << state_names[curr_state]);
     Ott_entry* new_ott_entry;
 
     if(curr_state == MODIFIED){
@@ -58,15 +61,16 @@ void Mesi::perform_ott_entry_removal(int core){
         l1_cache->ott->remove_entry(l1_block->addr);
     }
     else if(curr_state == EXCLUSIVE){
+        bool modified  = false;
         queue<Trace*>& tr_queue = l1_cache->miss_trace_buffer->buffer[l1_block->addr];
         while(!tr_queue.empty()){
-            if(tr_queue.front()->request == 'w'){
-                l1_block->block_state = MODIFIED;
-                l1_cache->copy(l1_block);
-                break;
+            if(tr_queue.front()->request == 'w' && !modified){
+                l1_cache->set_block_state(l1_block->index, l1_block->way, MODIFIED);
+                modified = true;
             }
             tr_queue.pop();
         }
+        log("Before handling msgs");
         handle_pending_msgs(core);
 
         l1_caches[core]->miss_trace_buffer->buffer.erase(l1_block->addr);
@@ -79,17 +83,17 @@ void Mesi::perform_ott_entry_removal(int core){
         
         while(!tr_queue.empty()){
             if(tr_queue.front()->request == 'w'){
-                process_trace(tr_queue.front());
-                break;
+                l1_cache->upgrade_misses++;
+                home_node = get_home_node(l1_block->addr, l2_cache);
+                new_msg =  make_msg_from_L1(core, l1_block->addr, UPGR);
+                l2_cache->queue_msg(new_msg, home_node);
+                l1_cache->ott->table[l1_block->addr]->_msg.type = UPGR;
+                l1_cache->ott->table[l1_block->addr]->invalid = false;
+                tr_queue.pop();
+                return;
             }
             tr_queue.pop();
         }
-        while(!tr_queue.empty()){
-            l1_caches[core]->miss_trace_buffer->buffer[temp_l1_block->addr].push(tr_queue.front());
-            tr_queue.pop();
-        }
-        handle_pending_msgs(core);
-
         l1_caches[core]->miss_trace_buffer->buffer.erase(l1_block->addr);
         l1_cache->ott->remove_entry(l1_block->addr);
 
@@ -121,11 +125,15 @@ void Mesi::handle_pending_msgs(int core){
     Ott_entry *ott_entry = l1_cache->find_ott_entry(l1_block->addr);
     if(ott_entry != nullptr){
         queue<Msg>& pending_queue =  l1_cache->pending_msgs_buffer->buffer[l1_block->addr];
-        if(ott_entry->_msg.type == GET){
+        if(ott_entry->_msg.type == GET || ott_entry->_msg.type == GETX || ott_entry->_msg.type == UPGR){
+            log("Pending queue size: " << pending_queue.size());
+            assert(pending_queue.size()  <= 1);
             while(!pending_queue.empty()){
                 Msg temp_msg = pending_queue.front();
                 pending_queue.pop();
 
+                assert(temp_msg.type != INV);
+                // DEAD CODE
                 if(temp_msg.type == INV){
                     l1_cache->lookup(l1_block);
                     l1_cache->invalidate(l1_block);
@@ -134,56 +142,31 @@ void Mesi::handle_pending_msgs(int core){
                     l1_caches[temp_msg.id]->queue_msg(new_msg);
                 }
 
-                assert(temp_msg.type == GET);
-                assert(temp_msg.type == GETX);
-            }
-        }
-
-        if(ott_entry->_msg.type == GETX){
-            // no penidng requests can come at this stage
-            // while(!pending_queue.empty()){
-            //     Msg temp_msg = pending_queue.front();
-            //     pending_queue.pop();
-
-            //     if(temp_msg.type == INV){
-            //         l1_cache->lookup(l1_block);
-            //         l1_cache->invalidate(l1_block);
-
-            //         new_msg = make_msg_from_L1(core, l1_block->addr, INV_ACK);
-            //         l1_caches[temp_msg.id]->queue_msg(new_msg);
-            //     }
-
-            //     if(temp_msg.type == GET){
-
-            //     }
-
-            //     if(temp_msg.type == GETX){
-
-            //     }
-            // }
-
-            assert(pending_queue.empty());
-        }
-
-        if(ott_entry->_msg.type == UPGR){
-            while(!pending_queue.empty()){
-                Msg temp_msg = pending_queue.front();
-                pending_queue.pop();
-
-                if(temp_msg.type == INV){
-                    l1_cache->lookup(l1_block);
-                    l1_cache->invalidate(l1_block);
-
-                    new_msg = make_msg_from_L1(core, l1_block->addr, INV_ACK);
-                    l1_caches[temp_msg.id]->queue_msg(new_msg);
+                switch(temp_msg.type) {
+                    case GET:
+                        l1_cache->set_block_state(l1_block->index, l1_block->way, SHARED);
+                        new_msg = make_msg_from_L1(core, l1_block->addr, PUT);
+                        assert(temp_msg.cache == L1);
+                        l1_caches[temp_msg.id]->queue_msg(new_msg);
+                        new_msg = make_msg_from_L1(core, l1_block->addr, SWB);
+                        l2_cache->queue_msg(new_msg, get_home_node(l1_block->addr, l2_cache));
+                        break;
+                    case GETX:
+                        l1_cache->invalidate(l1_block);
+                        new_msg = make_msg_from_L1(core, l1_block->addr, PUTX);
+                        assert(temp_msg.cache == L1);
+                        l1_caches[temp_msg.id]->queue_msg(new_msg);
+                        new_msg = make_msg_from_L1(core, l1_block->addr, SWB);
+                        l2_cache->queue_msg(new_msg, get_home_node(l1_block->addr, l2_cache));
+                    default:
+                        log("received msg type " << msg_names[temp_msg.type]);
+                        throw_error("wrong msg type in pending queue on core %d\n", core);
                 }
-
-                //need to verify this
-                assert(temp_msg.type == GET);
-                //need to verify this
-                assert(temp_msg.type == GETX);
+//                assert(temp_msg.type == GET);
+//                assert(temp_msg.type == GETX);
             }
         }
+
     }
 }
 
@@ -235,13 +218,14 @@ void Mesi::handle_put_L1(int core, int expected_invalidations) {
 
     l1_block->block_state = SHARED;
     l1_caches[core]->copy(l1_block);
+    log("after copy");
     l1_caches[core]->update_repl_params(l1_block->index, l1_block->way);
-    
+    log("after update_repl");
     // Some block got evicted
     handle_victim_L1(core);
-
+    log("handle_victim_L1 done");
     perform_ott_entry_removal(core);
-
+    log("perform ott done");
 ret:
     return;
 }
@@ -257,12 +241,12 @@ void Mesi::handle_pute_L1(int core, int expected_invalidations) {
     l1_block->block_state = EXCLUSIVE;
     l1_caches[core]->copy(l1_block);
     l1_caches[core]->update_repl_params(l1_block->index, l1_block->way);
-    
+    log("Before victim");
     // Some block got evicted
     handle_victim_L1(core);
 
     perform_ott_entry_removal(core);
-
+    log("Ott entry removed");
 ret:
     return;
 }
@@ -336,10 +320,13 @@ void Mesi::handle_get_L1(int core, Msg* _msg) {
 
     Ott_entry *ott_entry = l1_cache->find_ott_entry(_msg->addr);
     if(ott_entry != nullptr){
+
         //send the inval request to pending requests
         assert(ott_entry->invalid == false);
         
         switch(ott_entry->_msg.type) {
+            // GET is possible when this core is the only sharer and home send PUTE response
+            case GET:
             case GETX:
             case UPGR:
                 l1_caches[core]->insert_to_pending(_msg);
@@ -349,16 +336,33 @@ void Mesi::handle_get_L1(int core, Msg* _msg) {
                 break;  
             
             default:
+                log("Sender: Level: " << _msg->cache << " id: " << _msg->id);
+                log( "core " << core << " ott entry msg type: " << msg_names[ott_entry->_msg.type]);
                 throw_error("%s: ott entry type invalid\n", __func__);
         }
 
         return;   
     }
 
-    // Assumed that block is present in the cache. what a fool I am
-    l1_caches[core]->set_block_state(l1_block->index, l1_block->way, SHARED);
-    new_msg = make_msg_from_L1(l1_caches[core]->ID, l1_block->addr, PUT);
-    l1_caches[requester_id]->queue_msg(new_msg);
+    l1_cache->lookup(l1_block);
+    assert(l1_block->valid);
+    switch(l1_block->block_state) {
+        case MODIFIED:
+        case EXCLUSIVE:
+            l1_cache->set_block_state(l1_block->index, l1_block->way, SHARED);
+            new_msg = make_msg_from_L1(core, l1_block->addr, SWB);
+            l2_cache->queue_msg(new_msg, get_home_node(l1_block->addr, l2_cache));
+            new_msg = make_msg_from_L1(core, l1_block->addr, PUT);
+            l1_caches[requester_id]->queue_msg(new_msg);
+            break;
+        default:
+            throw_error("GET request received in state %s\n", state_names[l1_block->block_state].c_str());
+    }
+
+//    // Assumed that block is present in the cache. what a fool I am
+//    l1_caches[core]->set_block_state(l1_block->index, l1_block->way, SHARED);
+//    new_msg = make_msg_from_L1(core, l1_block->addr, PUT);
+//    l1_caches[requester_id]->queue_msg(new_msg);
     
 
 }
@@ -374,6 +378,7 @@ void Mesi::handle_getx_L1(int core, Msg *_msg){
         assert(ott_entry->invalid == false);
         
         switch(ott_entry->_msg.type) {
+            case GET:
             case GETX:
             case UPGR:
                 l1_caches[core]->insert_to_pending(_msg);
@@ -389,10 +394,24 @@ void Mesi::handle_getx_L1(int core, Msg *_msg){
         return;   
     }
 
-    // Assumed that block is present in the cache. what a fool I am
-    l1_caches[core]->invalidate(l1_block);
-    new_msg = make_msg_from_L1(l1_caches[core]->ID, l1_block->addr, PUTX);
-    l1_caches[requester_id]->queue_msg(new_msg);
+    l1_cache->lookup(l1_block);
+    assert(l1_block->valid);
+    switch(l1_block->block_state) {
+        case MODIFIED:
+        case EXCLUSIVE:
+            l1_cache->invalidate(l1_block);
+            new_msg = make_msg_from_L1(core, l1_block->addr, SWB);
+            l2_cache->queue_msg(new_msg, get_home_node(l1_block->addr, l2_cache));
+            new_msg = make_msg_from_L1(core, l1_block->addr, PUTX);
+            l1_caches[requester_id]->queue_msg(new_msg);
+            break;
+        default:
+            throw_error("GET request received in state %s\n", state_names[l1_block->block_state].c_str());
+    }
+//    // Assumed that block is present in the cache. what a fool I am
+//    l1_caches[core]->invalidate(l1_block);
+//    new_msg = make_msg_from_L1(l1_caches[core]->ID, l1_block->addr, PUTX);
+//    l1_caches[requester_id]->queue_msg(new_msg);
 }
 
 /*****************************DANGER******************************************/
@@ -556,7 +575,7 @@ void Mesi::handle_INV_ACK_L1(int core){
     //just copy the block the the l1 cache and remove the ott entry;
     if(l1_caches[core]->ott->table[l1_block->addr]->pending_invals == 0){
         handle_put_L1_inv_ack(core, MODIFIED);
-        perform_ott_entry_removal(core);
+//        perform_ott_entry_removal(core);
     }
 }
 
@@ -662,7 +681,7 @@ void Mesi::process_trace(Trace *trace_entry) {
             l2_cache->queue_msg(new_msg, home_node);
             
             //Create new OTT entry
-            Ott_entry* new_ott_entry = create_ott_entry(l2_cache->msg_queues[home_node].back(), l1_block, 0, false);
+            Ott_entry* new_ott_entry = create_ott_entry(new_msg, l1_block, 0, false);
             l1_cache->ott->add_entry(l1_block->addr, new_ott_entry);                        
 
         }
@@ -691,6 +710,7 @@ l1_ret:
 //    log("process trace finished");
     l1_block->block_state = INVALID;
     l1_block->valid = false;
+    l2_block->valid = false;
 
 }
 
@@ -703,6 +723,8 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
     l1_cache->get_block(_msg->addr, l1_block);
 
     l1_cache->num_msgs[_msg->type]++;
+
+    log("msg type: " << msg_names[_msg->type]);
 
     switch(_msg->type) {
     
@@ -753,21 +775,29 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
     default:
         break;
     }
+
+    l1_block->valid = false;
+    l1_block->block_state = INVALID;
+    l2_block->valid = false;
 }
 
 void Mesi::process_l2_msg(Msg *_msg, int bank_id) {
     l2_cache->get_block(_msg->addr, l2_block);
     l2_cache->lookup(l2_block);
-
+    log("l2_block dir state: " << state_names[l2_block->dir_entry.curr_state]);
     l2_cache->num_msgs[bank_id][_msg->type]++;
+
+    log("sender: " << _msg->id << " addr: " << _msg->addr << " type: " << msg_names[_msg->type]);
 
     switch(_msg->type) {
     
     case GET:
+        log("in case GET");
         handle_get_L2( bank_id, _msg->id);
         break;
     
     case GETX:
+        log("in case GETX");
         handle_getx_L2( bank_id, _msg->id);
         break;
     
@@ -795,6 +825,10 @@ void Mesi::process_l2_msg(Msg *_msg, int bank_id) {
         handle_inv_ack_L2(bank_id, _msg->id);
         break;
     }
+
+    l1_block->valid = false;
+    l1_block->block_state = INVALID;
+    l2_block->valid = false;
 }
 
 
@@ -811,7 +845,7 @@ void Mesi:: handle_get_L2(int bank_id, int source_core) {
 
     // If the block is not present in L2 then install new one from memory !!!!! WRONG
     if (!l2_block->valid) {
-
+        log("l2 miss");
         /**** SPECIAL CASE **********/
         l2_cache->lookup_evicted_blocks(l2_block);
         // send NACK
@@ -821,11 +855,14 @@ void Mesi:: handle_get_L2(int bank_id, int source_core) {
         }
         /*******************************/
         l2_block->dir_entry.curr_state = UNOWNED;
+        log("copying addr: " << l2_block->addr);
         l2_cache->copy(l2_block);
         l2_cache->update_repl_params(l2_block->index, l2_block->way);
         handle_victim_L2(bank_id, source_core);
+        log("block copied in l2 cache");
     }
 
+    log("dir state: " << l2_block->dir_entry.curr_state);
     // Now the block is there
     switch(l2_block->dir_entry.curr_state) {
     
@@ -846,11 +883,13 @@ void Mesi:: handle_get_L2(int bank_id, int source_core) {
     // Need to forward request to owner
     case MODIFIED:
         owner = get_owner(l2_block->dir_entry.sharer);
+        log("owner: " << owner);
         new_msg = make_msg_from_L1(source_core, l2_block->addr, GET);
         sharers.push_back(owner);
         sharers.push_back(source_core);
         l2_cache->set_directory_state(PSH, l2_block->index, l2_block->way);
         l2_cache->set_sharers(sharers, l2_block->index, l2_block->way);
+        log("GET request sent to core " << owner);
         l1_caches[owner]->queue_msg(new_msg);
         break;
     
@@ -875,6 +914,7 @@ void Mesi::handle_getx_L2(int bank_id, int source_core) {
     int owner;
     vector<int> sharers;
 
+//    assert(l2_block->valid); // DEBUG
     // If the block is not present in L2 then install new one from memory !!!!! WRONG
     if (!l2_block->valid) {
 
@@ -907,7 +947,9 @@ void Mesi::handle_getx_L2(int bank_id, int source_core) {
     // Send invalidations to all the sharers with source as L1 requester. Set DIR State to M, set the owner, set PUTX response to requester along with
     // invalidation count
     case SHARED:
+        log("in case shared");
         for(int i=0; i < CORES; i++) {
+            if (i == source_core) continue;
             if(l2_block->dir_entry.sharer[i]) {
                 new_msg = make_msg_from_L1(source_core, l2_block->addr, INV);
                 l1_caches[i]->queue_msg(new_msg);
@@ -916,6 +958,7 @@ void Mesi::handle_getx_L2(int bank_id, int source_core) {
         l2_cache->set_owner(source_core, l2_block->index, l2_block->way);
         new_msg = make_msg_from_L2(bank_id, l2_block->addr, PUTX);
         new_msg->expected_invalidations = l2_block->dir_entry.sharer.count();
+        log("expt invals: " << new_msg->expected_invalidations);
         l1_caches[source_core]->queue_msg(new_msg);
         break;
     
@@ -939,7 +982,12 @@ void Mesi::handle_getx_L2(int bank_id, int source_core) {
         new_msg = make_msg_from_L2(bank_id, l2_block->addr, NACK);
         l1_caches[source_core]->queue_msg(new_msg);
         break;
+
+        default:
+            log("in default case. state: " << state_names[l2_block->dir_entry.curr_state]);
+            throw_error("%s: invalid dir state\n", __func__);
     }
+
 
 }
 

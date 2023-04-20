@@ -1,5 +1,7 @@
 #include <simulator.h>
 
+extern map<msg_type, string> msg_names;
+
 L1Cache::L1Cache(int id) {
     int i=0;
     ID = id;
@@ -80,27 +82,34 @@ int L1Cache::invoke_repl_policy(int index) {
 }
 
 void L1Cache::copy(Block *_block) {
-
+    log("copy start");
     _block->way = get_target_way(_block->index);
 
     if (_block->way < 0) {
+        log("no way found, start replacement");
         _block->way = invoke_repl_policy(_block->index);
 
     }
 
-    sets[_block->index]->invalid_ways.erase(_block->way);
+    log("block_way: " << _block->way);
+    log("block found");
+//    sets[_block->index]->invalid_ways.erase(_block->way);
     _block->valid = 1; // to be sure
+    log("before assigning sets");
     sets[_block->index]->blocks[_block->way] = *_block;
+
+    log("copy end");
 
 }
 
 int L1Cache::get_target_way(int index) {
-
-    if (sets[index]->invalid_ways.empty())
-        return -1;
-
-    return *sets[index]->invalid_ways.begin();
-
+    for (int i =0; i < no_ways; i++){
+        if (!sets[index]->blocks[i].valid){
+            log("way = " << i);
+            return i;
+        }
+    }
+    return -1;
 }
 
 void L1Cache::get_block(unsigned long long addr,
@@ -125,6 +134,7 @@ void L1Cache::set_block_state(int index, int way, state new_state) {
 }
 
 void L1Cache::queue_msg(Msg *_msg) {
+    log("core: " << ID << " msg: " << msg_names[_msg->type]);
     msgs.push(_msg);
 }
 

@@ -51,6 +51,11 @@ class Directory_entry{
 public:
    std::bitset<8> sharer;
    state curr_state;
+
+   Directory_entry() {
+       curr_state = INVALID;
+       sharer.reset();
+   }
 };
 
 // Define a state machine for MESI protocol

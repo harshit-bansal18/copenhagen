@@ -3,11 +3,14 @@
 
 using namespace std;
 ofstream debug;
+Simulator *simulator;
 
 void handle_signal(int sig) {
     cout << "received signal " << sig << endl;
     debug.flush();
     debug.close();
+    simulator->print_stats();
+    delete simulator;
     exit(1);
 }
 
@@ -21,11 +24,12 @@ int main(int argc, char* argv[]){
     
     debug.open(argv[2]);
 
-    Simulator simulator(argv[1]);
+    simulator =  new Simulator(argv[1]);
 
-    simulator.start_simulator();
-
+    simulator->start_simulator();
+    simulator->print_stats();
     debug.flush();
     debug.close();
+    delete simulator;
     return 0;
 }

@@ -67,6 +67,10 @@ class Directory_entry{
 public:
    std::bitset<8> sharer;
    state curr_state;
+   Directory_entry() {
+       sharer.reset();
+       curr_state = UNOWNED;
+   }
 };
 
 // Define a state machine for MESI protocol
@@ -115,8 +119,8 @@ class Block {
     public:
     unsigned long long addr;
     unsigned long tag;
-    unsigned long index;
-    unsigned int way;
+    long index;
+    int way;
     bool  valid;
     Directory_entry dir_entry; // for L2 cache
     state block_state; // for L1 cache
@@ -332,4 +336,6 @@ public:
     void execute_part2();
     void start_simulator();
     bool end_condition();
+    void print_stats();
+    void print_specs();
 };

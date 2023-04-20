@@ -1,5 +1,27 @@
 #include <simulator.h>
 
+map<msg_type, string> msg_names = {{GET, "GET"},
+                                   {GETX, "GETX"},
+                                   {PUT, "PUT"},
+                                   {PUTX, "PUTX"},
+                                   {WB, "WB"},
+                                   {WB_ACK, "WB_ACK"},
+                                   {NACK, "NACK"},
+                                   {NACKE, "NACKE"},
+                                   {INV, "INV"},
+                                   {SWB, "SWB"},
+                                   {INV_ACK, "INV_ACK"},
+                                   {UPGR, "UPGR"},
+                                   {UPGR_ACK, "UPGR_ACK"},
+                                   {PUTE, "PUTE"}};
+
+map<state, string> state_names = {{SHARED, "SHARED"},
+                                  {MODIFIED, "MODIFIED"},
+                                  {PSH, "PSH"},
+                                  {PDEX, "PDEX"},
+                                  {INVALID, "INVALID"},
+                                  {UNOWNED, "UNOWNED"},
+                                  {EXCLUSIVE, "EXCLUSIVE"}};
 
 static inline int get_home_node(unsigned long long addr, L2Cache *l2_cache)
 {
@@ -39,6 +61,7 @@ Simulator::Simulator(string f_name)
     tmp_msg1_queue.resize(THREAD_COUNT);
     tmp_msg2_queue.resize(THREAD_COUNT);
     log("simulator constructor done");
+    print_specs();
 }
 
 //TODO: update it to include pending msgs and ott check
@@ -71,7 +94,7 @@ Trace *process_trace_line(string trace_line)
     stringstream trace_line_ss(trace_line);
     trace_line_ss >> trace->thread_id >> trace->address >> trace->request >> trace->global_id;
     trace->address >>= BLOCK_BITS;
-
+    log("tid: " << trace->thread_id << ", global_id: " << trace->global_id << ", address: " << trace->address << ", type: " << trace->request);
     return trace;
 }
 
@@ -100,6 +123,7 @@ void Simulator::start_simulator() {
         for(int i=0; i < THREAD_COUNT; i++) {
             l1_caches[i]->ott->decrement_timer();
             vector<Ott_entry *> &reprocess_msgs = l1_caches[i]->ott->nackTimer.front();
+            // Retry all the requests
             for(Ott_entry *entry: reprocess_msgs) {
                 Msg *new_msg = new Msg(entry->_msg);
                 entry->invalid = false;
@@ -112,6 +136,7 @@ void Simulator::start_simulator() {
             tmp_trace = nullptr;
             queue<Trace*> &ti = l1_caches[i]->trace_input;
             if(getline(f_traces[i], trace_line)){
+                log("read trace_line: " << trace_line);
                 tmp_trace = process_trace_line(trace_line);
                 ti.push(tmp_trace);
 //                log("push done");
@@ -143,9 +168,11 @@ void Simulator::start_simulator() {
             }
             else
                 tmp_msg1_queue[i] = nullptr;
-            if (l2_msgs.empty())
+            if (!l2_msgs.empty())
             {
                 tmp_msg2_queue[i] = l2_msgs.front();
+                log(i);
+                log(msg_names[tmp_msg2_queue[i]->type]);
                 l2_msgs.pop();
             }
             else
@@ -153,96 +180,43 @@ void Simulator::start_simulator() {
         }
 
         execute_part2();
-        log(cycle_counter);
+        log("cycle counter: " << cycle_counter);
         global_counter_to_process++;
 
     } while(!end_condition());
 
 }
 
+void Simulator::print_stats() {
+    int bank_id = 0;
+    cout << "------L1 STATS-------\n";
+    for (auto cache:l1_caches){
+        cout << "\t------ CORE " << cache->ID << " --------\n";
+        cout << "\tAccesses: " << cache->accesses;
+        cout << "\tMisses: " << cache->misses;
+        cout << "\tUpgrade Misses: " << cache->upgrade_misses << "\n";
+        for (auto it: msg_names) {
+            cout << "\t" << it.second << ": " << cache->num_msgs[it.first] << "\n";
+        }
+    }
+    cout << "------L2 STATS-------\n";
 
-//void Simulator::start_simulator()
-//{
-//    log("Starting the simulator...");
-//    bool started = false;
-//    while (1)
-//    {
-//        // nack handling done
-//        // TODO: handle pending msgs over here
-//        for (int i = 0; i < THREAD_COUNT; i++)
-//        {
-//            l1_caches[i]->ott->decrement_timer();
-//            vector<Ott_entry *> &reprocess_traces = l1_caches[i]->ott->nackTimer.front();
-//            for (Ott_entry *ott_entry : reprocess_traces)
-//            {
-//                Msg *new_msg = new Msg(ott_entry->_msg);
-//                ott_entry->invalid = false;
-//                l2_cache->queue_msg(new_msg, get_home_node(new_msg->addr, l2_cache));
-//            }
-//        }
-//
-////        log("post nack");
-//
-//        if (end_condition(started))
-//            break;
-//
-//        started = true;
-//        //posting trace entries to queue and find one trace to process;
-//        for (int i = 0; i < THREAD_COUNT; i++)
-//        {
-//            tmp_trace = nullptr;
-//            queue<Trace *> &ti = l1_caches[i]->trace_input;
-//            auto change_trace = [&]()
-//            {
-//                if (!ti.empty() && ti.front()->global_id == global_counter_to_process)
-//                {
-//                    tmp_trace = ti.front();
-//                    ti.pop();
-//                    mesi->process_trace(tmp_trace);
-//                }
-//            };
-//            if (ti.size() >= MAX_TRACE_QUEUE_SIZE)
-//            {
-//                change_trace();
-//                break;
-//            };
-//            string trace_line;
-//            if (!getline(f_traces[i], trace_line))
-//            {
-//                change_trace();
-//                break;
-//            };
-//            Trace *trace = process_trace_line(trace_line);
-//            ti.push(trace);
-//            change_trace();
-//        }
-////        log("trace done");
-//        //finding head of all input queues to l1 and l2
-//        for (int i = 0; i < THREAD_COUNT; i++)
-//        {
-//            auto &l1_msgs = l1_caches[i]->msgs;
-//            auto &l2_msgs = l2_cache->msg_queues[i];
-//            if (!l1_msgs.empty())
-//            {
-//                tmp_msg1_queue[i] = l1_msgs.front();
-//                l1_msgs.pop();
-//            }
-//            else
-//                tmp_msg1_queue[i] = nullptr;
-//            if (l2_msgs.empty())
-//            {
-//                tmp_msg2_queue[i] = l2_msgs.front();
-//                l2_msgs.pop();
-//            }
-//            else
-//                tmp_msg2_queue[i] = nullptr;
-//        }
-//
-//        //PART 2
-//        execute_part2();
-//
-//        global_counter_to_process++;
-////        free(tmp_trace);
-//
-//    }
-//}
+    for (auto &vec:l2_cache->num_msgs){
+        cout << "\t------ BANK" << bank_id++ << " --------\n";
+//        cout << "\tAccesses: " << cache->accesses;
+//        cout << "\tMisses: " << cache->misses;
+//        cout << "\tUpgrade Misses: " << ;
+        for (auto it: msg_names) {
+            cout << "\t" << it.second << ": " << vec[it.first] << "\n";
+        }
+    }
+}
+
+void Simulator::print_specs() {
+    cout << "--------L1 Cache-------\n";
+    cout << "Ways: " << l1_caches[0]->no_ways << "\n";
+    cout << "Sets: " << l1_caches[0]->no_sets << "\n";
+    cout << "--------L2 Cache-------\n";
+    cout << "Ways: " << l2_cache->no_ways << "\n";
+    cout << "Sets: " << l2_cache->no_sets << "\n";
+}
