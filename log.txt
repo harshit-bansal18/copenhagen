@@ -23878,10 +23878,6 @@ process_l2_msg: sender: 0 addr: 17591175532277 type: WB
 queue_msg: core: 0 msg: WB_ACK
 set_directory_state: addr: 17591175532277: prev state: MODIFIED
 set_directory_state: addr: 17591175532277: new state: UNOWNED
-queue_msg: core: 0 msg: PUTE
-queue_msg: core: 0 msg: WB_ACK
-set_directory_state: addr: 17591175532277: prev state: UNOWNED
-set_directory_state: addr: 17591175532277: new state: MODIFIED
 start_simulator: cycle counter: 3000
 start_simulator: read trace_line: 0 1125835234065800 r 3000
 process_trace_line: tid: 0, global_id: 3000, address: 17591175532278, type: r
@@ -23913,4 +23909,19 @@ process_trace_line: tid: 0, global_id: 3001, address: 17591175532278, type: r
 start_simulator: 5
 start_simulator: INV_ACK
 process_l1_msg: msg type: PUTE
-handle_pute_L1: Before assertion, address: 17591175532277 ,core: 0global_id: 2996
+handle_pute_L1: Before assertion, address: 17591175532278 ,core: 0global_id: 2999
+handle_pute_L1: before setting block state
+handle_pute_L1: Before copy core: 0
+copy: copy start
+get_target_way: way = 6
+copy: block_way: 6
+copy: block found
+copy: before assigning sets
+copy: copy end
+handle_pute_L1: Before victim
+perform_ott_entry_removal: curr_state EXCLUSIVE
+perform_ott_entry_removal: Before handling msgs
+handle_pending_msgs: Pending queue size: 0
+handle_pute_L1: Ott entry removed
+process_l2_msg: l2_block dir state: UNOWNED
+process_l2_msg: sender: 0 addr: 17591175532277 type: INV_ACK

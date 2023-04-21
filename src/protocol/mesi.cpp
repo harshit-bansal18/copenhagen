@@ -341,6 +341,7 @@ void Mesi::handle_get_L1(int core, Msg* _msg) {
                 break;
             // ignore the GET Request? Will be served by home node.
             case WB:
+
                 break;  
             
             default:
@@ -593,8 +594,28 @@ void Mesi::handle_INV_ACK_L1(int core, unsigned long long curr_msg_id){
 void Mesi::handle_WB_ACK_L1(int core, unsigned long long curr_msg_id) {
     //Pending finish ott entry removal
     // Ott_entry* ott_entry = l1_caches[core]->find_ott_entry(l1_block->addr);
-    l1_caches[core]->ott->remove_entry(l1_block->addr);
+    L1Cache *l1_cache = l1_caches[core];
+    int home_node;
+    Msg *new_msg;
+    //store the trace buffer in safe place
+    if(l1_cache->miss_trace_buffer->buffer[l1_block->addr].empty()){
+        l1_cache->miss_trace_buffer->buffer.erase(l1_block->addr);
+        l1_cache->ott->remove_entry(l1_block->addr);
+        return;
+    }
+    msg_type new_type;
+    Trace *front_trace = l1_cache->miss_trace_buffer->buffer[l1_block->addr].front();
+    assert(front_trace->request == 'r' || front_trace->request == 'w');
 
+    new_type = (front_trace->request == 'r') ? GET : GETX;
+
+    l1_cache->misses++;
+    home_node = get_home_node(l1_block->addr, l2_cache);
+    new_msg = make_msg_from_L1(core, l1_block->addr, new_type, front_trace->global_id);
+    l2_cache->queue_msg(new_msg, home_node);
+    l1_cache->ott->table[l1_block->addr]->_msg = *new_msg;
+    l1_cache->ott->table[l1_block->addr]->invalid = false;
+    l1_cache->miss_trace_buffer->buffer[l1_block->addr].pop();
 }
 
 void Mesi::handle_UPGR_ACK_L1(int core, unsigned long long curr_msg_id, int expected_invalidations){
@@ -1215,6 +1236,7 @@ void Mesi::handle_wb_L2(int bank_id, int source_core, unsigned  long long curr_m
         new_msg = make_msg_from_L2(bank_id, l2_block->addr, WB_ACK, curr_msg_id);
         l1_caches[source_core]->queue_msg(new_msg);
         l2_cache->set_directory_state(UNOWNED, l2_block->index, l2_block->way);
+        break;
     // Set the directory state to MODIFIED
     case PSH:
         l2_block->dir_entry.sharer[source_core] = false;
