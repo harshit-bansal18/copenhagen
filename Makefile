@@ -12,3 +12,4 @@ init5:
 
 clean:
 	rm -f init5
+	echo '' > log.txt

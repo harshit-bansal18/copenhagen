@@ -13,7 +13,8 @@ map<msg_type, string> msg_names = {{GET, "GET"},
                                    {INV_ACK, "INV_ACK"},
                                    {UPGR, "UPGR"},
                                    {UPGR_ACK, "UPGR_ACK"},
-                                   {PUTE, "PUTE"}};
+                                   {PUTE, "PUTE"},
+                                   {NUM_MSG_TYPES, "NUM_MSG_TYPES"}};
 
 map<state, string> state_names = {{SHARED, "SHARED"},
                                   {MODIFIED, "MODIFIED"},
@@ -90,6 +91,7 @@ bool Simulator::end_condition()
 Trace *process_trace_line(string trace_line)
 {
     //to complete;
+    if(trace_line == "") return nullptr;
     Trace *trace = new Trace();
     stringstream trace_line_ss(trace_line);
     trace_line_ss >> trace->thread_id >> trace->address >> trace->request >> trace->global_id;
@@ -149,7 +151,8 @@ void Simulator::start_simulator() {
             if (getline(f_traces[i], trace_line)) {
                 log("read trace_line: " << trace_line);
                 tmp_trace = process_trace_line(trace_line);
-                ti.push(tmp_trace);
+                if(tmp_trace != nullptr)
+                    ti.push(tmp_trace);
 //                log("push done");
             }
 
