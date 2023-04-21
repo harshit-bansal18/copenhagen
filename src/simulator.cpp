@@ -255,15 +255,15 @@ void Simulator::print_end_states(){
         cout << "\tOTT table size: " << temp_l1_cache->ott->table.size() << '\n';
 
         int leftotts = 1;
-        if(temp_l1_cache->ott->table.size() != 0){
-
-            for (auto &[pending_addr,_entry]: temp_l1_cache->ott->table){
-                cout << "addr: " << pending_addr << " global_id: " << _entry->_msg.global_id << " msg_type: "
-                     << msg_names[_entry->_msg.type] << " ott invalid: " << (_entry->invalid ? "true" : "false") << '\n';
-
-            }
-
-        }
+//        if(temp_l1_cache->ott->table.size() != 0){
+//
+//            for (auto &[pending_addr,_entry]: temp_l1_cache->ott->table){
+//                cout << "addr: " << pending_addr << " global_id: " << _entry->_msg.global_id << " msg_type: "
+//                     << msg_names[_entry->_msg.type] << " ott invalid: " << (_entry->invalid ? "true" : "false") << '\n';
+//
+//            }
+//
+//        }
 
         //check for trace queue
         cout << "\tTrace queue empty: " << (temp_l1_cache->empty_trace_queue() ? "True" : "False") << '\n';

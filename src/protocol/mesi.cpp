@@ -1254,7 +1254,7 @@ void Mesi::handle_wb_L2(int bank_id, int source_core, unsigned  long long curr_m
                 l1_caches[source_core]->queue_msg(new_msg);
                 // Required because earlier pending invalidation was set to 2. But now only one is required.
                 l2_cache->dec_pending_inv(l2_block);
-                
+                break;
             
             // send the invalidations now
             case PDEX:

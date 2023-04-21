@@ -3,7 +3,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 
-#define SIZE (1 << 12)
+#define SIZE (1 << 20)
 
 int *a, num_threads;
 unsigned long long *private_sum, sum=0;
