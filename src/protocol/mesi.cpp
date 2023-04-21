@@ -679,6 +679,7 @@ void Mesi::process_trace(Trace *trace_entry) {
     L1Cache *l1_cache;
 //    log("Thread id: " << trace_entry->thread_id << ", Address: " << trace_entry->address << ", global count: " << trace_entry->global_id);
 //    log((trace_entry->address << 6));
+    log("core: " << trace_entry->thread_id << " addr: " << trace_entry->address << " global_id: " << trace_entry->global_id);
     int core = trace_entry->thread_id;
     int home_node;
     unsigned long long shifted_addr;
@@ -764,7 +765,7 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
 
     l1_cache->num_msgs[_msg->type]++;
 
-    log("msg type: " << msg_names[_msg->type]);
+    log("msg type: " << msg_names[_msg->type] << " addr: " << _msg->addr);
 
     switch(_msg->type) {
     
@@ -787,7 +788,7 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
     case GETX:
         handle_getx_L1(core, _msg);
         break;
-    
+
     // This can never happen
     case UPGR:
         throw_error("tag: %lld: L1 received UPGR msg\n",l1_block->tag);
@@ -828,7 +829,7 @@ void Mesi::process_l2_msg(Msg *_msg, int bank_id) {
     log("l2_block dir state: " << state_names[l2_block->dir_entry.curr_state]);
     l2_cache->num_msgs[bank_id][_msg->type]++;
 
-    log("sender: " << _msg->id << " addr: " << _msg->addr << " type: " << msg_names[_msg->type]);
+    log("sender: " << _msg->id << " addr: " << _msg->addr << " type: " << msg_names[_msg->type] << " global_id: " << _msg->global_id);
 
     switch(_msg->type) {
     
