@@ -803,6 +803,7 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
         break;
     case WB_ACK:
         handle_WB_ACK_L1(core, _msg->global_id);
+        break;
     case INV:
         handle_INV_L1(core, _msg);
         break;
