@@ -59,7 +59,26 @@ int L2Cache::invoke_repl_policy(int index) {
     Block _tmp;
     // it should set the victim cache block
     // Victim will be the tail of list
-    struct list_item *_victim = sets[index]->repl_list.head->prev;
+    // change here to check for victim way to have state psh or pdex, avoid those
+
+    struct list_item *curr_elem = sets[index]->repl_list.head->prev;
+    struct list_item *_victim;
+    bool all_busy = true;
+    do {
+        if (sets[index]->blocks[curr_elem->way].block_state != PSH && sets[index]->blocks[curr_elem->way].block_state != PDEX)
+        {
+            _victim = curr_elem;
+            all_busy = false;
+            break;
+        }
+        curr_elem = curr_elem->prev;
+    } while(curr_elem != sets[index]->repl_list.head);
+
+    if(all_busy){
+        _victim = sets[index]->repl_list.head->prev;
+    }
+
+
     _victim_way = _victim->way;
 
     if (_victim_way == -1) {
@@ -173,6 +192,7 @@ void L2Cache::lookup_evicted_blocks(Block *_block) {
 }
 
 void L2Cache::drop_evicted_block(Block *_block) {
+    log("Dropping block addr: " << _block->addr);
     if (eb_buffer->buffer.find(_block->addr) == eb_buffer->buffer.end())
         throw_error("%s: evicted block not found\n", __func__);
 
@@ -189,6 +209,7 @@ int L2Cache::dec_pending_inv(Block *_block) {
 }
 
 void L2Cache::insert_evicted_block(Block *_block, int num_inval) {
+    log("inserting block to evicted block l2 addr: " << _block->addr);
     eb_entry *new_entry;
     if (eb_buffer->buffer.find(_block->addr) != eb_buffer->buffer.end())
         throw_error("%s: evicted block already exists\n", __func__);
@@ -196,5 +217,6 @@ void L2Cache::insert_evicted_block(Block *_block, int num_inval) {
     new_entry = new eb_entry();
     new_entry->pending_invals = num_inval;
     new_entry->_block =  *_block;
+    eb_buffer->buffer[_block->addr] = new_entry;
 }
 

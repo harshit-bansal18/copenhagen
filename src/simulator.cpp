@@ -96,7 +96,7 @@ Trace *process_trace_line(string trace_line)
     stringstream trace_line_ss(trace_line);
     trace_line_ss >> trace->thread_id >> trace->address >> trace->request >> trace->global_id;
     trace->address >>= BLOCK_BITS;
-    log("tid: " << trace->thread_id << ", global_id: " << trace->global_id << ", address: " << trace->address << ", type: " << trace->request);
+//    log("tid: " << trace->thread_id << ", global_id: " << trace->global_id << ", address: " << trace->address << ", type: " << trace->request);
     return trace;
 }
 
@@ -158,6 +158,10 @@ void Simulator::start_simulator() {
                 entry->invalid = false;
                 l2_cache->queue_msg(new_msg, get_home_node(new_msg->addr, l2_cache));
                 executed_something = true;
+//                if(entry->_block.addr == 638588){
+//                    log("Nack exiting for addr: 638588");
+//                    exit(1);
+//                }
             }
         }
 

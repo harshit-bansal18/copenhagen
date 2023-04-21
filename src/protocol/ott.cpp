@@ -12,7 +12,7 @@ Ott_entry* create_ott_entry(Msg* msg, Block* _block, int pi, bool hmr){
 
 
 OTT::OTT(){
-    nackTimer.assign(6, {});
+    nackTimer.assign(NACK_TIMER+1, {});
 }
 
 void OTT::add_entry(unsigned long long addr, Ott_entry* entry){

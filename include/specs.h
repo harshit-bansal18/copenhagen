@@ -17,5 +17,6 @@
 #define THREAD_COUNT 8
 #define MAX_TRACE_QUEUE_SIZE 5
 #define BLOCK_BITS 6
+#define NACK_TIMER 21
 
 #endif

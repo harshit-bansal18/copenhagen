@@ -63,7 +63,24 @@ int L1Cache::invoke_repl_policy(int index) {
     Block _tmp;
     // it should set the victim cache block
     // Victim will be the tail of list
-    struct list_item *_victim = sets[index]->repl_list.head->prev;
+    struct list_item *curr_elem = sets[index]->repl_list.head->prev;
+    struct list_item *_victim;
+    bool all_busy = true;
+    do {
+        if (!ott->check_entry(sets[index]->blocks[curr_elem->way].addr))
+        {
+            _victim = curr_elem;
+            all_busy = false;
+            break;
+        }
+        curr_elem = curr_elem->prev;
+    } while(curr_elem != sets[index]->repl_list.head);
+
+    if(all_busy){
+        _victim = sets[index]->repl_list.head->prev;
+    }
+
+
     _victim_way = _victim->way;
 
     if (_victim_way == -1) {
