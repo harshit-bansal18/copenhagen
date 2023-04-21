@@ -354,4 +354,5 @@ public:
     void print_stats();
     void print_specs();
     void print_end_states();
+    void fill_traces();
 };

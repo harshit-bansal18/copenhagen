@@ -198,14 +198,17 @@ void Mesi::handle_victim_L1(int core, unsigned long long curr_msg_id){
 //        l1_cache->victim = NULL;
         //
         // There wont be any writeback or msg sent to home node
-        if (_victim.block_state == SHARED)
+        if (_victim.block_state == SHARED) {
+
             goto ret;
+        }
         // Directory has block in modified state to need to send WB to notify the directory
         else if (_victim.block_state == EXCLUSIVE || _victim.block_state == MODIFIED) {
             log("Issuing WB since block is in " << state_names[_victim.block_state] << " state");
             home_node = get_home_node(l1_block->addr, l2_cache);
-            new_msg =  make_msg_from_L1(l1_cache->ID, _victim.addr, WB, curr_msg_id);
+            new_msg =  make_msg_from_L1(core, _victim.addr, WB, curr_msg_id);
             //Done: create OTT entry
+            assert(l1_cache->ott->check_entry(_victim.addr) == false); // DEBUG
             new_ott_entry = create_ott_entry(new_msg, &_victim, 0, false);
             l1_cache->ott->add_entry(_victim.addr, new_ott_entry);
             l2_cache->queue_msg(new_msg, home_node);
@@ -593,13 +596,33 @@ void Mesi::handle_NACKE_L1(int core, Msg *_msg){
 
 void Mesi::handle_INV_ACK_L1(int core, unsigned long long curr_msg_id){
     log("starting inv ack handling global_id: " << curr_msg_id);
-    l1_caches[core]->ott->table[l1_block->addr]->pending_invals--;
-    log("pending invals reduced by one, pending_invals: " << l1_caches[core]->ott->table[l1_block->addr]->pending_invals << " global_id: " << curr_msg_id);
-    //just copy the block the the l1 cache and remove the ott entry;
-    if(l1_caches[core]->ott->table[l1_block->addr]->pending_invals == 0){
+    L1Cache *l1_cache = l1_caches[core];
+    Ott_entry *ottEntry = l1_cache->find_ott_entry(l1_block->addr);
+    assert(ottEntry != nullptr);
+    ottEntry->pending_invals--;
+    if (ottEntry->pending_invals != 0)
+        return;
+
+    if (ottEntry->invalid) {
+        assert(ottEntry->_msg.type == UPGR);
         handle_put_L1_inv_ack(core, MODIFIED, curr_msg_id);
-//        perform_ott_entry_removal(core);
     }
+    else {
+        l1_cache->lookup(l1_block);
+        if (l1_block->valid) {
+            assert(ottEntry->_msg.type == UPGR);
+            log("Block is valid");
+            l1_block->block_state = MODIFIED;
+            l1_cache->set_block_state(l1_block->index, l1_block->way, MODIFIED);
+            perform_ott_entry_removal(core);
+        }
+        else {
+            assert(ottEntry->_msg.type == GETX);
+            log("Block is not valid");
+            handle_put_L1_inv_ack(core, MODIFIED, curr_msg_id);
+        }
+    }
+
 }
 
 /*
@@ -653,7 +676,7 @@ void Mesi::handle_UPGR_ACK_L1(int core, unsigned long long curr_msg_id, int expe
         goto ret;
 
 
-    if(ott_entry->invalid){
+    if(ott_entry->invalid || l1_block->valid == false){
         l1_block->block_state = MODIFIED;
         l1_caches[core]->copy(l1_block);
         l1_caches[core]->update_repl_params(l1_block->index, l1_block->way);
@@ -1044,7 +1067,7 @@ void Mesi::handle_upgr_L2(int bank_id, int source_core, unsigned long long curr_
     Msg *new_msg;
     int owner;
     vector<int> sharers;
-
+    int invals = 0;
     // If the block is not present in L2 then install new one from memory !!!!! WRONG
     if (!l2_block->valid) {
 
@@ -1076,18 +1099,22 @@ void Mesi::handle_upgr_L2(int bank_id, int source_core, unsigned long long curr_
     // Send invalidations to all the sharers except the requester with source as L1 requester. Set DIR State to M, set the owner, set PUTX response to requester along with
     // invalidation count.
     case SHARED:
+
         for(int i=0; i < CORES; i++) {
             if (i == source_core) continue;
             if(l2_block->dir_entry.sharer[i]) {
+                invals++;
                 new_msg = make_msg_from_L1(source_core, l2_block->addr, INV, curr_msg_id);
                 l1_caches[i]->queue_msg(new_msg);
             }
         }
+        l2_cache->set_directory_state(MODIFIED, l2_block->index, l2_block->way);
         l2_cache->set_owner(source_core, l2_block->index, l2_block->way);
         new_msg = make_msg_from_L2(bank_id, l2_block->addr, UPGR_ACK, curr_msg_id);
         // perfect the expected_invalidations
-        new_msg->expected_invalidations = l2_block->dir_entry.sharer.count();
+        new_msg->expected_invalidations  = invals;
         l1_caches[source_core]->queue_msg(new_msg);
+        invals = 0;
         break;
     
     // Need to forward request to owner

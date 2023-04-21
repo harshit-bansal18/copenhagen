@@ -100,6 +100,21 @@ Trace *process_trace_line(string trace_line)
     return trace;
 }
 
+void Simulator::fill_traces() {
+    string trace_line;
+    Trace *_tmp_trace;
+    for(int i = 0; i < THREAD_COUNT; i++) {
+        while(getline(f_traces[i], trace_line)) {
+            _tmp_trace = process_trace_line(trace_line);
+            if (_tmp_trace != nullptr)
+                l1_caches[i]->trace_input.push(_tmp_trace);
+
+        }
+        cout << "Core " << i << ": Trace input size: " << l1_caches[i]->trace_input.size() << "\n";
+    }
+
+}
+
 void Simulator::execute_part2(bool &executed_something)
 {
     if (tmp_trace != nullptr) {
@@ -119,17 +134,19 @@ void Simulator::execute_part2(bool &executed_something)
         }
     }
 }
+
 void Simulator::start_simulator() {
     bool started = false;
     int selected_core = -1;
     string trace_line;
 //    int executed_something = 6;
     bool executed_something = false;
+
+    fill_traces();
     do {
+        unsigned long long min_global_id = LONG_LONG_MAX;
+        tmp_trace = nullptr;
         executed_something = false;
-        // Cycle counter increment
-//        log("executed_something: " << executed_something);
-        cycle_counter++;
         selected_core = -1;
         // NACK timer handling
         for (int i = 0; i < THREAD_COUNT; i++) {
@@ -146,29 +163,29 @@ void Simulator::start_simulator() {
 
         // select trace entry to process
         for (int i = 0; i < THREAD_COUNT; i++) {
-            tmp_trace = nullptr;
+            Trace *_t2;
+            _t2 = nullptr;
             queue<Trace *> &ti = l1_caches[i]->trace_input;
-            if (getline(f_traces[i], trace_line)) {
-                log("read trace_line: " << trace_line);
-                tmp_trace = process_trace_line(trace_line);
-                if(tmp_trace != nullptr)
-                    ti.push(tmp_trace);
-//                log("push done");
-            }
-
             if (ti.empty())
                 continue;
 
-            tmp_trace = ti.front();
-            if (tmp_trace->global_id == global_counter_to_process) {
+            _t2 = ti.front();
+            log("core " << i << ": head id: " << _t2->global_id);
+            if (_t2->global_id < min_global_id) {
+                min_global_id = _t2->global_id;
                 selected_core = i;
             }
         }
-        if (selected_core != -1) {
+        if (min_global_id == global_counter_to_process) {
+            log("selected global id: " << min_global_id);
+            global_counter_to_process++;
             tmp_trace = l1_caches[selected_core]->trace_input.front();
             l1_caches[selected_core]->trace_input.pop();
-        } else
-            tmp_trace = nullptr;
+            if (cycle_counter == 20371) {
+                cout << "new front: " << l1_caches[selected_core]->trace_input.front()->global_id << "\n";
+            }
+
+        }
 
         for (int i = 0; i < THREAD_COUNT; i++) {
             auto &l1_msgs = l1_caches[i]->msgs;
@@ -187,7 +204,7 @@ void Simulator::start_simulator() {
 
         execute_part2(executed_something);
         log("cycle counter: " << cycle_counter);
-        global_counter_to_process++;
+        cycle_counter++;
 //        if (!executed_something){
 //            break;
 //        }
@@ -236,14 +253,32 @@ void Simulator::print_end_states(){
         L1Cache* temp_l1_cache = l1_caches[core];
         //check for OTT entry
         cout << "\tOTT table size: " << temp_l1_cache->ott->table.size() << '\n';
-//        int leftotts = 1;
-//        if(temp_l1_cache->ott->table.size() != 0){
-//
-//            cout << "-------------- OTT LEFT 1 ----------------"
-//        }
+
+        int leftotts = 1;
+        if(temp_l1_cache->ott->table.size() != 0){
+
+            for (auto &[pending_addr,_entry]: temp_l1_cache->ott->table){
+                cout << "addr: " << pending_addr << " global_id: " << _entry->_msg.global_id << " msg_type: "
+                     << msg_names[_entry->_msg.type] << " ott invalid: " << (_entry->invalid ? "true" : "false") << '\n';
+
+            }
+
+        }
+
         //check for trace queue
         cout << "\tTrace queue empty: " << (temp_l1_cache->empty_trace_queue() ? "True" : "False") << '\n';
-        cout << "\tMsg queue empty: " << (temp_l1_cache->empty_msg_queue() ? "True" : "False") << '\n';
+//        if(temp_l1_cache->empty_trace_queue() == false){
+//            cout << "\t Trace queue size: " << temp_l1_cache->trace_input.size() << '\n';
+//            queue<Trace*>& tr_queue = temp_l1_cache->trace_input;
+//            while(!tr_queue.empty()){
+//                Trace* curr_trace = tr_queue.front();
+//                cout << '\n';
+//                cout << "Global_id: " << curr_trace->global_id << " addr: " << curr_trace->address << " type: " << curr_trace->request << "\n";
+//                cout << '\n';
+//                tr_queue.pop();
+//            }
+//        }
+        cout << "\tMsg queue empty: " << (temp_l1_cache->msgs.empty() ? "True" : "False") << '\n';
         cout << "\tOTT table trace buffer empty: " << (temp_l1_cache->miss_trace_buffer->empty_trace_buffer() ? "True" : "False") << '\n';
         cout << "\tOTT table pending msgs empty: " << (temp_l1_cache->pending_msgs_buffer->empty_pending_msgs() ? "True" : "False") << '\n';
     }
