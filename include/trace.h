@@ -11,7 +11,7 @@ public:
     int thread_id;
     char request;
     unsigned long long address;
-    long long global_id;
+    unsigned long long global_id;
 };
 
 #endif
