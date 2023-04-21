@@ -178,7 +178,7 @@ void Mesi::handle_victim_L1(int core, unsigned long long curr_msg_id){
     int home_node;
     Msg *new_msg;
     L1Cache *l1_cache = l1_caches[core];
-    
+    Ott_entry  *new_ott_entry;
     if (l1_cache->victim) {
         _victim = *l1_cache->victim;
         log("addr: " << _victim.addr);
@@ -206,9 +206,12 @@ void Mesi::handle_victim_L1(int core, unsigned long long curr_msg_id){
             home_node = get_home_node(l1_block->addr, l2_cache);
             new_msg =  make_msg_from_L1(l1_cache->ID, _victim.addr, WB, curr_msg_id);
             //Done: create OTT entry
-            create_ott_entry(new_msg, &_victim, 0, false);
+            new_ott_entry = create_ott_entry(new_msg, &_victim, 0, false);
+            l1_cache->ott->add_entry(_victim.addr, new_ott_entry);
             l2_cache->queue_msg(new_msg, home_node);
         }
+//        log();
+        assert(l1_cache->ott->check_entry(_victim.addr));
     }
 ret:
     return;
@@ -230,6 +233,7 @@ void Mesi::handle_put_L1(int core, unsigned long long curr_msg_id, int expected_
     // Some block got evicted
     handle_victim_L1(core, curr_msg_id);
     log("handle_victim_L1 done");
+    log("removing ott entry for global_id: " << curr_msg_id);
     perform_ott_entry_removal(core);
     log("perform ott done");
 ret:
@@ -255,7 +259,7 @@ void Mesi::handle_pute_L1(int core, unsigned long long curr_msg_id, int expected
     log("Before victim");
     // Some block got evicted
     handle_victim_L1(core, curr_msg_id);
-
+    log("removing ott entry for global_id: " << curr_msg_id);
     perform_ott_entry_removal(core);
     log("Ott entry removed");
 ret:
@@ -264,6 +268,7 @@ ret:
 
 
 void Mesi::handle_putx_L1(int core, unsigned long long curr_msg_id, int expected_invalidations) {
+    log("global_id: " << curr_msg_id << " expected_invalidations: " << expected_invalidations);
     Block _victim;
     Msg *new_msg;
     int home_node; 
@@ -292,7 +297,7 @@ void Mesi::handle_putx_L1(int core, unsigned long long curr_msg_id, int expected
     
     // Some block got evicted
     handle_victim_L1(core, curr_msg_id);
-
+    log("removing ott entry for global_id: " << curr_msg_id);
     perform_ott_entry_removal(core);
 
 ret:
@@ -312,7 +317,7 @@ void Mesi::handle_put_L1_inv_ack(int core, state put_state, unsigned long long c
     l1_caches[core]->update_repl_params(l1_block->index, l1_block->way);
     
     handle_victim_L1(core, curr_msg_id);
-
+    log("removing ott entry for global_id: " << curr_msg_id);
     perform_ott_entry_removal(core);
 }
 
@@ -525,9 +530,10 @@ void Mesi::handle_INV_L1(int core, Msg* _msg){
     if(to_perform){
         if(!ignore_block_state_change){
             l1_cache->lookup(l1_block);
-            log("Type: " << msg_names[_msg->type] << " addr: " << _msg->addr);
-            assert(l1_block->valid);
-            l1_cache->invalidate(l1_block);
+            log("Type: " << msg_names[_msg->type] << " addr: " << _msg->addr << " global_id: " << _msg->global_id);
+//            assert(l1_block->valid);
+            if(l1_block->valid)
+                l1_cache->invalidate(l1_block);
         }
         new_msg = make_msg_from_L1(l1_cache->ID, l1_block->addr, INV_ACK, _msg->global_id);
 
@@ -586,8 +592,9 @@ void Mesi::handle_NACKE_L1(int core, Msg *_msg){
 
 
 void Mesi::handle_INV_ACK_L1(int core, unsigned long long curr_msg_id){
+    log("starting inv ack handling global_id: " << curr_msg_id);
     l1_caches[core]->ott->table[l1_block->addr]->pending_invals--;
-
+    log("pending invals reduced by one, pending_invals: " << l1_caches[core]->ott->table[l1_block->addr]->pending_invals << " global_id: " << curr_msg_id);
     //just copy the block the the l1 cache and remove the ott entry;
     if(l1_caches[core]->ott->table[l1_block->addr]->pending_invals == 0){
         handle_put_L1_inv_ack(core, MODIFIED, curr_msg_id);
@@ -633,8 +640,7 @@ void Mesi::handle_UPGR_ACK_L1(int core, unsigned long long curr_msg_id, int expe
     // Check if ott entry in invalid
     // if yes, then nack it
     // else putx it
-
-
+    log("global_id: " << curr_msg_id << " expected_invalidations: " << expected_invalidations);
     Block _victim;
     Msg *new_msg;
     int home_node; 
@@ -657,7 +663,7 @@ void Mesi::handle_UPGR_ACK_L1(int core, unsigned long long curr_msg_id, int expe
         //do similar to putx;
         l1_caches[core]->set_block_state(l1_block->index, l1_block->way, MODIFIED);
     }
-    
+    log("removing ott entry for global_id: " << curr_msg_id);
     perform_ott_entry_removal(core);
 ret:
     return;
@@ -692,11 +698,11 @@ void Mesi::process_trace(Trace *trace_entry) {
 
     //check ott entry
     if(l1_cache->ott->check_entry(shifted_addr)){
-//        log("ott entry present");
+        log("ott entry present");
         l1_cache->miss_trace_buffer->buffer[shifted_addr].push(trace_entry);
         goto l1_ret;
     }
-
+    log("ott entry not present");
     l1_cache->lookup(l1_block);
     if(l1_block->valid){
         l1_cache->update_repl_params(l1_block->index, l1_block->way);
@@ -723,7 +729,7 @@ void Mesi::process_trace(Trace *trace_entry) {
             
             //Create new OTT entry
             Ott_entry* new_ott_entry = create_ott_entry(new_msg, l1_block, 0, false);
-            l1_cache->ott->add_entry(l1_block->addr, new_ott_entry);                        
+            l1_cache->ott->add_entry(l1_block->addr, new_ott_entry);
 
         }
         goto l1_ret;
@@ -779,7 +785,7 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
         break;
     
     case PUTX:
-        handle_putx_L1(core, _msg->global_id,_msg->expected_invalidations);
+        handle_putx_L1(core, _msg->global_id, _msg->expected_invalidations);
         break;
     // If this L1 cache is the owner of some block.
     case GET:
@@ -800,7 +806,7 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
         handle_INV_ACK_L1(core, _msg->global_id);
         break;
     case UPGR_ACK:
-        handle_UPGR_ACK_L1(core, _msg->global_id,_msg->expected_invalidations);
+        handle_UPGR_ACK_L1(core, _msg->global_id, _msg->expected_invalidations);
         break;
     case WB_ACK:
         handle_WB_ACK_L1(core, _msg->global_id);
@@ -1078,8 +1084,9 @@ void Mesi::handle_upgr_L2(int bank_id, int source_core, unsigned long long curr_
             }
         }
         l2_cache->set_owner(source_core, l2_block->index, l2_block->way);
-        new_msg = make_msg_from_L2(bank_id, l2_block->addr, PUTX, curr_msg_id);
-        new_msg->expected_invalidations = l2_block->dir_entry.sharer.count() - 1;
+        new_msg = make_msg_from_L2(bank_id, l2_block->addr, UPGR_ACK, curr_msg_id);
+        // perfect the expected_invalidations
+        new_msg->expected_invalidations = l2_block->dir_entry.sharer.count();
         l1_caches[source_core]->queue_msg(new_msg);
         break;
     

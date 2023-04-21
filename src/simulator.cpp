@@ -98,44 +98,55 @@ Trace *process_trace_line(string trace_line)
     return trace;
 }
 
-void Simulator::execute_part2()
+void Simulator::execute_part2(bool &executed_something)
 {
-    if (tmp_trace != nullptr)
+    if (tmp_trace != nullptr) {
+        executed_something = true;
         mesi->process_trace(tmp_trace);
-
+    }
     for (int i = 0; i < THREAD_COUNT; i++)
     {
-        if (tmp_msg1_queue[i] != nullptr)
+        if (tmp_msg1_queue[i] != nullptr){
+            executed_something = true;
             mesi->process_l1_msg(tmp_msg1_queue[i], i);
-        if (tmp_msg2_queue[i] != nullptr)
+        }
+
+        if (tmp_msg2_queue[i] != nullptr) {
+            executed_something = true;
             mesi->process_l2_msg(tmp_msg2_queue[i], i);
+        }
     }
 }
 void Simulator::start_simulator() {
     bool started = false;
     int selected_core = -1;
     string trace_line;
+//    int executed_something = 6;
+    bool executed_something = false;
     do {
+        executed_something = false;
         // Cycle counter increment
+//        log("executed_something: " << executed_something);
         cycle_counter++;
         selected_core = -1;
         // NACK timer handling
-        for(int i=0; i < THREAD_COUNT; i++) {
+        for (int i = 0; i < THREAD_COUNT; i++) {
             l1_caches[i]->ott->decrement_timer();
             vector<Ott_entry *> &reprocess_msgs = l1_caches[i]->ott->nackTimer.front();
             // Retry all the requests
-            for(Ott_entry *entry: reprocess_msgs) {
+            for (Ott_entry *entry: reprocess_msgs) {
                 Msg *new_msg = new Msg(entry->_msg);
                 entry->invalid = false;
                 l2_cache->queue_msg(new_msg, get_home_node(new_msg->addr, l2_cache));
+                executed_something = true;
             }
         }
 
         // select trace entry to process
-        for(int i =0; i < THREAD_COUNT; i++){
+        for (int i = 0; i < THREAD_COUNT; i++) {
             tmp_trace = nullptr;
-            queue<Trace*> &ti = l1_caches[i]->trace_input;
-            if(getline(f_traces[i], trace_line)){
+            queue<Trace *> &ti = l1_caches[i]->trace_input;
+            if (getline(f_traces[i], trace_line)) {
                 log("read trace_line: " << trace_line);
                 tmp_trace = process_trace_line(trace_line);
                 ti.push(tmp_trace);
@@ -153,35 +164,31 @@ void Simulator::start_simulator() {
         if (selected_core != -1) {
             tmp_trace = l1_caches[selected_core]->trace_input.front();
             l1_caches[selected_core]->trace_input.pop();
-        }
-        else
+        } else
             tmp_trace = nullptr;
 
-        for (int i = 0; i < THREAD_COUNT; i++)
-        {
+        for (int i = 0; i < THREAD_COUNT; i++) {
             auto &l1_msgs = l1_caches[i]->msgs;
             auto &l2_msgs = l2_cache->msg_queues[i];
-            if (!l1_msgs.empty())
-            {
+            if (!l1_msgs.empty()) {
                 tmp_msg1_queue[i] = l1_msgs.front();
                 l1_msgs.pop();
-            }
-            else
+            } else
                 tmp_msg1_queue[i] = nullptr;
-            if (!l2_msgs.empty())
-            {
+            if (!l2_msgs.empty()) {
                 tmp_msg2_queue[i] = l2_msgs.front();
                 l2_msgs.pop();
-            }
-            else
+            } else
                 tmp_msg2_queue[i] = nullptr;
         }
 
-        execute_part2();
+        execute_part2(executed_something);
         log("cycle counter: " << cycle_counter);
         global_counter_to_process++;
-
-    } while(!end_condition());
+//        if (!executed_something){
+//            break;
+//        }
+    } while (!end_condition());
 
 }
 
@@ -217,4 +224,22 @@ void Simulator::print_specs() {
     cout << "--------L2 Cache-------\n";
     cout << "Ways: " << l2_cache->no_ways << "\n";
     cout << "Sets: " << l2_cache->no_sets << "\n";
+}
+
+void Simulator::print_end_states(){
+    cout << "---------------------Ending condition-------------------------\n";
+    for(int core = 0; core < CORES; core++){
+        cout << "------- L1 core " << core << " ----------\n";
+        L1Cache* temp_l1_cache = l1_caches[core];
+        //check for OTT entry
+        cout << "\tOTT table size: " << temp_l1_cache->ott->table.size() << '\n';
+        //check for trace queue
+        cout << "\tTrace queue empty: " << (temp_l1_cache->empty_trace_queue() ? "True" : "False") << '\n';
+        cout << "\tMsg queue empty: " << (temp_l1_cache->empty_msg_queue() ? "True" : "False") << '\n';
+        cout << "\tOTT table trace buffer empty: " << (temp_l1_cache->miss_trace_buffer->empty_trace_buffer() ? "True" : "False") << '\n';
+        cout << "\tOTT table pending msgs empty: " << (temp_l1_cache->pending_msgs_buffer->empty_pending_msgs() ? "True" : "False") << '\n';
+    }
+    cout << '\n';
+    cout << "-------L2 Cache--------\n";
+    cout << "\tMsg queue empty: " << (l2_cache->empty_msg_queues() ? "True" : "False") << '\n';
 }

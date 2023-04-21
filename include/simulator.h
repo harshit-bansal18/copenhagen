@@ -172,11 +172,25 @@ public:
 class pending_msgs{
 public:
     map<unsigned long long, queue<Msg>> buffer;
+    bool empty_pending_msgs(){
+        if(buffer.empty() == 0) return true;
+        for(auto &p: buffer){
+            if(!p.second.empty()) return false;
+        }
+        return true;
+    }
 };
 
 class trace_buffer {
 public:
     map<unsigned long long, queue<Trace *>> buffer;
+    bool empty_trace_buffer(){
+        if(buffer.empty() == 0) return true;
+        for(auto &p: buffer){
+            if(!p.second.empty()) return false;
+        }
+        return true;
+    }
 };
 
 struct eb_entry{
@@ -334,9 +348,10 @@ public:
     vector<Msg*> tmp_msg2_queue;
 
     Simulator(string f_name);
-    void execute_part2();
+    void execute_part2(bool &executed_something);
     void start_simulator();
     bool end_condition();
     void print_stats();
     void print_specs();
+    void print_end_states();
 };

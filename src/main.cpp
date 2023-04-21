@@ -10,6 +10,8 @@ void handle_signal(int sig) {
     debug.flush();
     debug.close();
     simulator->print_stats();
+    cout << '\n';
+    simulator->print_end_states();
     delete simulator;
     exit(1);
 }
@@ -28,6 +30,8 @@ int main(int argc, char* argv[]){
 
     simulator->start_simulator();
     simulator->print_stats();
+    cout << '\n';
+    simulator->print_end_states();
     debug.flush();
     debug.close();
     delete simulator;
