@@ -161,6 +161,7 @@ void Mesi::handle_pending_msgs(int core){
                         l1_caches[temp_msg.id]->queue_msg(new_msg);
                         new_msg = make_msg_from_L1(core, l1_block->addr, SWB, temp_msg.global_id);
                         l2_cache->queue_msg(new_msg, get_home_node(l1_block->addr, l2_cache));
+                        break;
                     default:
                         log("received msg type " << msg_names[temp_msg.type]);
                         throw_error("wrong msg type in pending queue on core %d\n", core);
@@ -282,6 +283,7 @@ void Mesi::handle_putx_L1(int core, unsigned long long curr_msg_id, int expected
                 // PUTX response to UPGR -> copy the new block
                 case UPGR:
                     assert(expected_invalidations == 0);
+                    break;
                 default:
                     throw_error("%s: PUTX responded to wrong type in invalid ott\n", __func__);
             }
@@ -366,6 +368,8 @@ void Mesi::handle_get_L1(int core, Msg* _msg) {
 
     l1_cache->lookup(l1_block);
     assert(l1_block->valid);
+    //if block got evicted
+//    if(l1_block)
     switch(l1_block->block_state) {
         case MODIFIED:
         case EXCLUSIVE:
@@ -600,11 +604,14 @@ void Mesi::handle_INV_ACK_L1(int core, unsigned long long curr_msg_id){
     Ott_entry *ottEntry = l1_cache->find_ott_entry(l1_block->addr);
     assert(ottEntry != nullptr);
     ottEntry->pending_invals--;
-    if (ottEntry->pending_invals != 0)
+    if (ottEntry->pending_invals != 0) {
+        log("Pending invalidation reduced by one to " << ottEntry->pending_invals);
         return;
-
+    }
     if (ottEntry->invalid) {
+        log("Ott entry is invalid");
         assert(ottEntry->_msg.type == UPGR);
+        log("to handle in put_l1_inv_ack");
         handle_put_L1_inv_ack(core, MODIFIED, curr_msg_id);
     }
     else {
@@ -794,7 +801,7 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
 
     l1_cache->num_msgs[_msg->type]++;
 
-    log("msg type: " << msg_names[_msg->type] << " addr: " << _msg->addr);
+    log("msg type: " << msg_names[_msg->type] << " addr: " << _msg->addr << " global_id: " << _msg->global_id);
 
     switch(_msg->type) {
     
@@ -1120,7 +1127,8 @@ void Mesi::handle_upgr_L2(int bank_id, int source_core, unsigned long long curr_
     // Need to forward request to owner
     case MODIFIED:
         owner = get_owner(l2_block->dir_entry.sharer);
-        new_msg = make_msg_from_L1(source_core, l2_block->addr, UPGR, curr_msg_id);
+        //Was UPGR, changed to PUTX
+        new_msg = make_msg_from_L1(source_core, l2_block->addr, GETX, curr_msg_id);
         l2_cache->set_directory_state(PDEX, l2_block->index, l2_block->way);
         l2_cache->set_owner(source_core, l2_block->index, l2_block->way);
         l1_caches[owner]->queue_msg(new_msg);
