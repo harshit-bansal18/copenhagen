@@ -236,6 +236,11 @@ void Simulator::print_end_states(){
         L1Cache* temp_l1_cache = l1_caches[core];
         //check for OTT entry
         cout << "\tOTT table size: " << temp_l1_cache->ott->table.size() << '\n';
+//        int leftotts = 1;
+//        if(temp_l1_cache->ott->table.size() != 0){
+//
+//            cout << "-------------- OTT LEFT 1 ----------------"
+//        }
         //check for trace queue
         cout << "\tTrace queue empty: " << (temp_l1_cache->empty_trace_queue() ? "True" : "False") << '\n';
         cout << "\tMsg queue empty: " << (temp_l1_cache->empty_msg_queue() ? "True" : "False") << '\n';
