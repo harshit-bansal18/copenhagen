@@ -134,7 +134,7 @@ void L1Cache::set_block_state(int index, int way, state new_state) {
 }
 
 void L1Cache::queue_msg(Msg *_msg) {
-    log("core: " << ID << " msg: " << msg_names[_msg->type]);
+    log("core: " << ID << " msg: " << msg_names[_msg->type] << " global_id: " << _msg->global_id);
     msgs.push(_msg);
 }
 

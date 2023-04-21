@@ -181,12 +181,14 @@ void Mesi::handle_victim_L1(int core, unsigned long long curr_msg_id){
     
     if (l1_cache->victim) {
         _victim = *l1_cache->victim;
+        log("addr: " << _victim.addr);
         delete l1_cache->victim;
         l1_cache->victim = NULL;
 
         if(l1_cache->ott->check_entry(_victim.addr)){
             assert(_victim.block_state == SHARED);
             //set ott invalid to true
+            log("victim has ott entry");
             l1_cache->ott->table[_victim.addr]->invalid = true;
         }
         
@@ -200,8 +202,9 @@ void Mesi::handle_victim_L1(int core, unsigned long long curr_msg_id){
             goto ret;
         // Directory has block in modified state to need to send WB to notify the directory
         else if (_victim.block_state == EXCLUSIVE || _victim.block_state == MODIFIED) {
+            log("Issuing WB since block is in " << state_names[_victim.block_state] << " state");
             home_node = get_home_node(l1_block->addr, l2_cache);
-            new_msg =  make_msg_from_L1(l1_cache->ID, l1_block->addr, WB, curr_msg_id);
+            new_msg =  make_msg_from_L1(l1_cache->ID, _victim.addr, WB, curr_msg_id);
             //Done: create OTT entry
             create_ott_entry(new_msg, &_victim, 0, false);
             l2_cache->queue_msg(new_msg, home_node);
@@ -515,10 +518,14 @@ void Mesi::handle_INV_L1(int core, Msg* _msg){
         }
         l1_cache->ott->table[_msg->addr]->invalid = true;
     }
+    else{
+        log("No ott entry present");
+    }
     
     if(to_perform){
         if(!ignore_block_state_change){
             l1_cache->lookup(l1_block);
+            log("Type: " << msg_names[_msg->type] << " addr: " << _msg->addr);
             assert(l1_block->valid);
             l1_cache->invalidate(l1_block);
         }
@@ -594,17 +601,21 @@ void Mesi::handle_INV_ACK_L1(int core, unsigned long long curr_msg_id){
 void Mesi::handle_WB_ACK_L1(int core, unsigned long long curr_msg_id) {
     //Pending finish ott entry removal
     // Ott_entry* ott_entry = l1_caches[core]->find_ott_entry(l1_block->addr);
+    log("starting this function for global_id " << curr_msg_id);
     L1Cache *l1_cache = l1_caches[core];
     int home_node;
     Msg *new_msg;
     //store the trace buffer in safe place
     if(l1_cache->miss_trace_buffer->buffer[l1_block->addr].empty()){
+        log("miss trace buffer empty");
         l1_cache->miss_trace_buffer->buffer.erase(l1_block->addr);
         l1_cache->ott->remove_entry(l1_block->addr);
+        log("returning from handle");
         return;
     }
     msg_type new_type;
     Trace *front_trace = l1_cache->miss_trace_buffer->buffer[l1_block->addr].front();
+    log("addr: " << front_trace->address << " type: " << front_trace->request);
     assert(front_trace->request == 'r' || front_trace->request == 'w');
 
     new_type = (front_trace->request == 'r') ? GET : GETX;
@@ -891,7 +902,7 @@ void Mesi:: handle_get_L2(int bank_id, int source_core, unsigned long long curr_
         log("block copied in l2 cache");
     }
 
-    log("dir state: " << l2_block->dir_entry.curr_state);
+    log("dir state: " << state_names[l2_block->dir_entry.curr_state]);
     // Now the block is there
     switch(l2_block->dir_entry.curr_state) {
     

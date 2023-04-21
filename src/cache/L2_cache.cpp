@@ -43,14 +43,10 @@ void L2Cache::invalidate(Block *_block) {
 void L2Cache::update_repl_params(int index, int way) {
     
     struct list_item *_item = sets[index]->repl_list.find_item(way);
-    log("find_item done");
     if (is_null(_item)) {
-        log("found null item");
         _item = (struct list_item*)malloc(sizeof(struct list_item));
         _item->way = way;
-        log("before add item");
         sets[index]->repl_list.add_item(_item);
-        log("add item done");
         return;
     }
     
@@ -130,8 +126,7 @@ bool L2Cache::empty_msg_queues() {
 }
 
 void L2Cache::queue_msg(Msg *_msg, int bank) {
-    log(msg_names[_msg->type]);
-    log(bank);
+    log("bank: " << bank << " msg: " << msg_names[_msg->type] << " global_id: " << _msg->global_id);
     msg_queues[bank].push(_msg);
 }
 

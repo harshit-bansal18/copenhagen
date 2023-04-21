@@ -171,8 +171,6 @@ void Simulator::start_simulator() {
             if (!l2_msgs.empty())
             {
                 tmp_msg2_queue[i] = l2_msgs.front();
-                log(i);
-                log(msg_names[tmp_msg2_queue[i]->type]);
                 l2_msgs.pop();
             }
             else
