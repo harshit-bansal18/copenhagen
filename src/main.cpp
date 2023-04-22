@@ -11,7 +11,7 @@ void handle_signal(int sig) {
     debug.close();
     simulator->print_stats();
     cout << '\n';
-    simulator->print_end_states();
+//    simulator->print_end_states();
     free(simulator);
     exit(1);
 }
@@ -30,8 +30,8 @@ int main(int argc, char* argv[]){
 
     simulator->start_simulator();
     simulator->print_stats();
-    cout << '\n';
-    simulator->print_end_states();
+//    cout << '\n';
+//    simulator->print_end_states();
     debug.flush();
     debug.close();
     free(simulator);

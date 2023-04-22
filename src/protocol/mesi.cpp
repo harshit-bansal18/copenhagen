@@ -565,16 +565,21 @@ void Mesi::handle_INV_L1(int core, Msg* _msg){
     else{
         log("No ott entry present");
     }
-    
+
     if(to_perform){
+        l1_cache->lookup(l1_block);
         if(!ignore_block_state_change){
-            l1_cache->lookup(l1_block);
             log("Type: " << msg_names[_msg->type] << " addr: " << _msg->addr << " global_id: " << _msg->global_id);
 //            assert(l1_block->valid);
             if(l1_block->valid)
                 l1_cache->invalidate(l1_block);
         }
-        new_msg = make_msg_from_L1(l1_cache->ID, l1_block->addr, INV_ACK, _msg->global_id);
+
+        if (cache_type == L2 && ((l1_block->valid && (l1_block->block_state == MODIFIED || l1_block->block_state == EXCLUSIVE)) ||
+                (ott_entry != nullptr && ott_entry->_msg.type == WB)))
+            new_msg = make_msg_from_L1(l1_cache->ID, l1_block->addr, WB, _msg->global_id);
+        else
+            new_msg = make_msg_from_L1(l1_cache->ID, l1_block->addr, INV_ACK, _msg->global_id);
 
         if(cache_type == L1)
                 l1_caches[source_id]->queue_msg(new_msg);
@@ -582,6 +587,41 @@ void Mesi::handle_INV_L1(int core, Msg* _msg){
             l2_cache->queue_msg(new_msg, source_id);
     }
 }
+
+//void Mesi::handle_INV_L1(int core, Msg *_msg) {
+//    L1Cache *l1_cache = l1_caches[core];
+//    Msg *new_msg = nullptr;
+//    Ott_entry  *entry = l1_cache->find_ott_entry(_msg->addr);
+//    l1_cache->lookup(l1_block);
+//
+//
+//    if (l1_block->valid && (l1_block->block_state == MODIFIED || l1_block->block_state == EXCLUSIVE)) {
+//        log("addr: " << _msg->addr << " is modified");
+//        assert(entry == nullptr);
+//        new_msg = make_msg_from_L1(core, _msg->addr, WB, _msg->global_id);
+//        entry = create_ott_entry(new_msg, l1_block, 0, false);
+//        l1_cache->ott->add_entry(_msg->addr, entry);
+//    }
+//    else if (entry != nullptr && entry->_msg.type == WB)
+//        new_msg = nullptr;
+//    else
+//        new_msg = make_msg_from_L1(core, _msg->addr, INV_ACK, _msg->global_id);
+//
+//    if (l1_block->valid)
+//        l1_cache->invalidate(l1_block);
+//
+//    if (entry != nullptr) {
+//        if (entry->_msg.type == WB || entry->_msg.type == UPGR)
+//            entry->invalid = true;
+//    }
+//
+//    if (new_msg != nullptr) {
+//        if (_msg->id == L1)
+//            l1_caches[_msg->id]->queue_msg(new_msg);
+//        else
+//            l2_cache->queue_msg(new_msg, _msg->id);
+//    }
+//}
 
 //done
 void Mesi::handle_NACK_L1(int core, Msg* _msg){
@@ -1226,12 +1266,14 @@ void Mesi::handle_swb_L2(int bank_id, int source_core, unsigned long long curr_m
 
                     }
                 }
+                l2_cache->eb_buffer->buffer[l2_block->addr]->_block.dir_entry.curr_state = SHARED;
                 
             }
             else {
                 owner = get_owner(l2_block->dir_entry.sharer);
                 new_msg = make_msg_from_L2(bank_id, l2_block->addr, INV, curr_msg_id);
                 l1_caches[owner]->queue_msg(new_msg);
+                l2_cache->eb_buffer->buffer[l2_block->addr]->_block.dir_entry.curr_state = MODIFIED;
             }
 
         }
@@ -1301,6 +1343,7 @@ void Mesi::handle_wb_L2(int bank_id, int source_core, unsigned  long long curr_m
                 l1_caches[source_core]->queue_msg(new_msg);
                 // Required because earlier pending invalidation was set to 2. But now only one is required.
                 l2_cache->dec_pending_inv(l2_block);
+                l2_cache->eb_buffer->buffer[l2_block->addr]->_block.dir_entry.curr_state = MODIFIED;
                 break;
             
             // send the invalidations now
@@ -1312,6 +1355,7 @@ void Mesi::handle_wb_L2(int bank_id, int source_core, unsigned  long long curr_m
                 l1_caches[owner]->queue_msg(new_msg);
                 new_msg = make_msg_from_L2(bank_id, l2_block->addr, WB_ACK, curr_msg_id);
                 l1_caches[source_core]->queue_msg(new_msg);
+                l2_cache->eb_buffer->buffer[l2_block->addr]->_block.dir_entry.curr_state = MODIFIED;
                 break;
             }
         }
@@ -1375,10 +1419,19 @@ void Mesi::handle_inv_ack_L2(int bank_id, int source_core, unsigned long long cu
    assert(!l2_block->valid);
    l2_cache->lookup_evicted_blocks(l2_block);
    assert(l2_block->valid);
-   inv = l2_cache->dec_pending_inv(l2_block);
-   if (inv == 0){
-        l2_cache->drop_evicted_block(l2_block);
-   }
+   log("dir state: " << state_names[l2_block->dir_entry.curr_state]);
+//   assert(l2_block->dir_entry.curr_state == SHARED);
+    switch (l2_block->dir_entry.curr_state) {
+        case SHARED:
+            inv = l2_cache->dec_pending_inv(l2_block);
+            if (inv == 0){
+                l2_cache->drop_evicted_block(l2_block);
+            }
+            break;
+        default:
+            break;
+    }
+
 }
 
 void Mesi::handle_victim_L2(int bank_id, int source_core, unsigned long long curr_msg_id) {

@@ -141,11 +141,13 @@ void Simulator::start_simulator() {
     string trace_line;
 //    int executed_something = 6;
     bool executed_something = false;
+    bool nack_exec = false;
     //will give error in prog1
 //    fill_traces();
     do {
         unsigned long long min_global_id = LONG_LONG_MAX;
         tmp_trace = nullptr;
+        nack_exec = false;
         executed_something = false;
         selected_core = -1;
         // NACK timer handling
@@ -158,6 +160,7 @@ void Simulator::start_simulator() {
                 entry->invalid = false;
                 l2_cache->queue_msg(new_msg, get_home_node(new_msg->addr, l2_cache));
                 executed_something = true;
+                nack_exec = true;
 //                if(entry->_block.addr == 638588){
 //                    log("Nack exiting for addr: 638588");
 //                    exit(1);
@@ -165,37 +168,36 @@ void Simulator::start_simulator() {
             }
         }
 
-        // select trace entry to process
-        for (int i = 0; i < THREAD_COUNT; i++) {
-            Trace *_t2;
-            _t2 = nullptr;
-            queue<Trace *> &ti = l1_caches[i]->trace_input;
+        if (!nack_exec) {
+            // select trace entry to process
+            for (int i = 0; i < THREAD_COUNT; i++) {
+                Trace *_t2;
+                _t2 = nullptr;
+                queue<Trace *> &ti = l1_caches[i]->trace_input;
 
-            //load new traces
-            if(ti.empty() && getline(f_traces[i], trace_line)){
-                Trace* _tmp_trace = process_trace_line(trace_line);
-                if (_tmp_trace != nullptr)
-                    l1_caches[i]->trace_input.push(_tmp_trace);
+                //load new traces
+                if (ti.empty() && getline(f_traces[i], trace_line)) {
+                    Trace *_tmp_trace = process_trace_line(trace_line);
+                    if (_tmp_trace != nullptr)
+                        l1_caches[i]->trace_input.push(_tmp_trace);
+                }
+
+                if (ti.empty())
+                    continue;
+
+                _t2 = ti.front();log("core " << i << ": head id: " << _t2->global_id);
+                if (_t2->global_id < min_global_id) {
+                    min_global_id = _t2->global_id;
+                    selected_core = i;
+                }
             }
+            if (min_global_id == global_counter_to_process) { log("selected global id: " << min_global_id);
+                global_counter_to_process++;
+                tmp_trace = l1_caches[selected_core]->trace_input.front();
+                l1_caches[selected_core]->trace_input.pop();
 
-            if (ti.empty())
-                continue;
-
-            _t2 = ti.front();
-            log("core " << i << ": head id: " << _t2->global_id);
-            if (_t2->global_id < min_global_id) {
-                min_global_id = _t2->global_id;
-                selected_core = i;
             }
         }
-        if (min_global_id == global_counter_to_process) {
-            log("selected global id: " << min_global_id);
-            global_counter_to_process++;
-            tmp_trace = l1_caches[selected_core]->trace_input.front();
-            l1_caches[selected_core]->trace_input.pop();
-
-        }
-
         for (int i = 0; i < THREAD_COUNT; i++) {
             auto &l1_msgs = l1_caches[i]->msgs;
             auto &l2_msgs = l2_cache->msg_queues[i];
@@ -222,6 +224,8 @@ void Simulator::start_simulator() {
 }
 
 void Simulator::print_stats() {
+    //maybe beautify this
+
     int bank_id = 0;
     cout << "Cycles: " << cycle_counter << "\n";
     cout << "------L1 STATS-------\n";
