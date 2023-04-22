@@ -59,7 +59,7 @@ void Mesi::perform_ott_entry_removal(int core){
     if(curr_state == MODIFIED){
         queue<Trace*>& tr_queue = l1_cache->miss_trace_buffer->buffer[l1_block->addr];
         while(!tr_queue.empty()){
-            free(tr_queue.front());
+//            free(tr_queue.front());
             tr_queue.pop();
         }
         handle_pending_msgs(core);
@@ -74,7 +74,7 @@ void Mesi::perform_ott_entry_removal(int core){
                 l1_cache->set_block_state(l1_block->index, l1_block->way, MODIFIED);
                 modified = true;
             }
-            free(tr_queue.front());
+//            free(tr_queue.front());
             tr_queue.pop();
         }
         log("Before handling msgs");
@@ -97,11 +97,11 @@ void Mesi::perform_ott_entry_removal(int core){
                 l1_cache->ott->table[l1_block->addr]->_msg.type = UPGR;
                 l1_cache->ott->table[l1_block->addr]->_msg.global_id = new_msg->global_id;
                 l1_cache->ott->table[l1_block->addr]->invalid = false;
-                free(tr_queue.front());
+//                free(tr_queue.front());
                 tr_queue.pop();
                 return;
             }
-            free(tr_queue.front());
+//            free(tr_queue.front());
             tr_queue.pop();
         }
         l1_caches[core]->miss_trace_buffer->buffer.erase(l1_block->addr);
@@ -527,6 +527,7 @@ void Mesi::handle_INV_L1(int core, Msg* _msg){
     //Check OTT entries to see if there is any for the current block
     // for normal requests we don't need to do anything
     Ott_entry *ott_entry = l1_cache->find_ott_entry(_msg->addr);
+    Ott_entry *new_entry;
     if(ott_entry != nullptr){
         if (ott_entry->invalid) {
             switch(ott_entry->_msg.type){
@@ -576,8 +577,13 @@ void Mesi::handle_INV_L1(int core, Msg* _msg){
         }
 
         if (cache_type == L2 && ((l1_block->valid && (l1_block->block_state == MODIFIED || l1_block->block_state == EXCLUSIVE)) ||
-                (ott_entry != nullptr && ott_entry->_msg.type == WB)))
+                (ott_entry != nullptr && ott_entry->_msg.type == WB))) {
             new_msg = make_msg_from_L1(l1_cache->ID, l1_block->addr, WB, _msg->global_id);
+            if(ott_entry == nullptr){
+                new_entry = create_ott_entry(new_msg, l1_block, 0, false);
+                l1_cache->ott->add_entry(_msg->addr, new_entry);
+            }
+        }
         else
             new_msg = make_msg_from_L1(l1_cache->ID, l1_block->addr, INV_ACK, _msg->global_id);
 
@@ -739,7 +745,7 @@ void Mesi::handle_WB_ACK_L1(int core, unsigned long long curr_msg_id) {
     l2_cache->queue_msg(new_msg, home_node);
     l1_cache->ott->table[l1_block->addr]->_msg = *new_msg;
     l1_cache->ott->table[l1_block->addr]->invalid = false;
-    free(front_trace);
+//    free(front_trace);
     l1_cache->miss_trace_buffer->buffer[l1_block->addr].pop();
 }
 
@@ -1007,7 +1013,7 @@ void Mesi:: handle_get_L2(int bank_id, int source_core, unsigned long long curr_
     // If the block is not present in L2 then install new one from memory !!!!! WRONG
     if (!l2_block->valid) {
         log("l2 miss");
-        /**** SPECIAL CASE **********/
+	/**** SPECIAL CASE **********/
         l2_cache->lookup_evicted_blocks(l2_block);
         // send NACK
         if (l2_block->valid) {
@@ -1019,6 +1025,7 @@ void Mesi:: handle_get_L2(int bank_id, int source_core, unsigned long long curr_
         l2_block->dir_entry.curr_state = UNOWNED;
         log("copying addr: " << l2_block->addr);
         l2_cache->copy(l2_block);
+	l2_cache->misses++;
         l2_cache->update_repl_params(l2_block->index, l2_block->way);
         handle_victim_L2(bank_id, source_core, curr_msg_id);
         log("block copied in l2 cache");
@@ -1079,7 +1086,6 @@ void Mesi::handle_getx_L2(int bank_id, int source_core, unsigned long long curr_
 //    assert(l2_block->valid); // DEBUG
     // If the block is not present in L2 then install new one from memory !!!!! WRONG
     if (!l2_block->valid) {
-
         /**** SPECIAL CASE **********/
         l2_cache->lookup_evicted_blocks(l2_block);
         // send NACK
@@ -1091,6 +1097,7 @@ void Mesi::handle_getx_L2(int bank_id, int source_core, unsigned long long curr_
         /*******************************/
         l2_block->dir_entry.curr_state = UNOWNED;
         l2_cache->copy(l2_block);
+	l2_cache->misses++;
         l2_cache->update_repl_params(l2_block->index, l2_block->way);
         handle_victim_L2(bank_id, source_core, curr_msg_id);
     }
@@ -1164,7 +1171,6 @@ void Mesi::handle_upgr_L2(int bank_id, int source_core, unsigned long long curr_
     int invals = 0;
     // If the block is not present in L2 then install new one from memory !!!!! WRONG
     if (!l2_block->valid) {
-
         /**** SPECIAL CASE **********/
         l2_cache->lookup_evicted_blocks(l2_block);
         // send NACK
@@ -1175,7 +1181,8 @@ void Mesi::handle_upgr_L2(int bank_id, int source_core, unsigned long long curr_
         }
         /*******************************/
         l2_block->dir_entry.curr_state = UNOWNED;
-        l2_cache->copy(l2_block);
+        l2_cache->misses++;
+	l2_cache->copy(l2_block);
         l2_cache->update_repl_params(l2_block->index, l2_block->way);
         handle_victim_L2(bank_id, source_core, curr_msg_id);
     }

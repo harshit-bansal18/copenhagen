@@ -145,6 +145,7 @@ void Simulator::start_simulator() {
     //will give error in prog1
 //    fill_traces();
     do {
+        log("cycle started");
         unsigned long long min_global_id = LONG_LONG_MAX;
         tmp_trace = nullptr;
         nack_exec = false;
@@ -153,9 +154,13 @@ void Simulator::start_simulator() {
         // NACK timer handling
         for (int i = 0; i < THREAD_COUNT; i++) {
             l1_caches[i]->ott->decrement_timer();
+            log("inside nack handling");
             vector<Ott_entry *> &reprocess_msgs = l1_caches[i]->ott->nackTimer.front();
             // Retry all the requests
+            log("before reprocessing trace");
             for (Ott_entry *entry: reprocess_msgs) {
+                assert(entry != nullptr);
+//                log("reprocessing traces");
                 Msg *new_msg = new Msg(entry->_msg);
                 entry->invalid = false;
                 l2_cache->queue_msg(new_msg, get_home_node(new_msg->addr, l2_cache));
@@ -167,7 +172,7 @@ void Simulator::start_simulator() {
 //                }
             }
         }
-
+        log("before collecting trace");
         if (!nack_exec) {
             // select trace entry to process
             for (int i = 0; i < THREAD_COUNT; i++) {
@@ -198,6 +203,7 @@ void Simulator::start_simulator() {
 
             }
         }
+        log("before collecting msgs");
         for (int i = 0; i < THREAD_COUNT; i++) {
             auto &l1_msgs = l1_caches[i]->msgs;
             auto &l2_msgs = l2_cache->msg_queues[i];
@@ -212,7 +218,7 @@ void Simulator::start_simulator() {
             } else
                 tmp_msg2_queue[i] = nullptr;
         }
-
+        log("Before part2");
         execute_part2(executed_something);
         log("cycle counter: " << cycle_counter);
         cycle_counter++;
@@ -239,11 +245,11 @@ void Simulator::print_stats() {
         }
     }
     cout << "------L2 STATS-------\n";
-
+    cout << "\t Misses: " << l2_cache->misses << '\n';
     for (auto &vec:l2_cache->num_msgs){
         cout << "\t------ BANK" << bank_id++ << " --------\n";
 //        cout << "\tAccesses: " << cache->accesses;
-//        cout << "\tMisses: " << cache->misses;
+        //cout << "\tMisses: " << cache->misses;
 //        cout << "\tUpgrade Misses: " << ;
         for (auto it: msg_names) {
             cout << "\t" << it.second << ": " << vec[it.first] << "\n";

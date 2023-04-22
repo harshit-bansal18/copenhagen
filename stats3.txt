@@ -6,268 +6,269 @@ Ways: 16
 Sets: 4096
 Cycles: 9653249
 ------L1 STATS-------
-        ------ CORE 0 --------
-        Accesses: 1605885       Misses: 1051274 Upgrade Misses: 6
-        GET: 86
-        GETX: 28
-        UPGR: 0
-        PUT: 33
-        PUTE: 525310
-        PUTX: 525931
-        INV: 366599
-        SWB: 0
-        WB: 0
-        INV_ACK: 10
-        UPGR_ACK: 6
-        NACK: 1
-        NACKE: 0
-        WB_ACK: 1050631
-        NUM_MSG_TYPES: 0
-        ------ CORE 1 --------
-        Accesses: 1051751       Misses: 524384  Upgrade Misses: 11
-        GET: 19
-        GETX: 0
-        UPGR: 0
-        PUT: 40
-        PUTE: 524310
-        PUTX: 34
-        INV: 40
-        SWB: 0
-        WB: 0
-        INV_ACK: 21
-        UPGR_ACK: 11
-        NACK: 0
-        NACKE: 0
-        WB_ACK: 523838
-        NUM_MSG_TYPES: 0
-        ------ CORE 2 --------
-        Accesses: 1056094       Misses: 524387  Upgrade Misses: 11
-        GET: 19
-        GETX: 0
-        UPGR: 0
-        PUT: 44
-        PUTE: 524308
-        PUTX: 35
-        INV: 45
-        SWB: 0
-        WB: 0
-        INV_ACK: 17
-        UPGR_ACK: 11
-        NACK: 93938
-        NACKE: 0
-        WB_ACK: 523836
-        NUM_MSG_TYPES: 0
-        ------ CORE 3 --------
-        Accesses: 1058036       Misses: 524392  Upgrade Misses: 11
-        GET: 8
-        GETX: 0
-        UPGR: 0
-        PUT: 54
-        PUTE: 524304
-        PUTX: 34
-        INV: 46
-        SWB: 0
-        WB: 0
-        INV_ACK: 21
-        UPGR_ACK: 11
-        NACK: 93718
-        NACKE: 0
-        WB_ACK: 523837
-        NUM_MSG_TYPES: 0
-        ------ CORE 4 --------
-        Accesses: 1052489       Misses: 524384  Upgrade Misses: 12
-        GET: 10
-        GETX: 0
-        UPGR: 0
-        PUT: 46
-        PUTE: 524304
-        PUTX: 34
-        INV: 40
-        SWB: 0
-        WB: 0
-        INV_ACK: 26
-        UPGR_ACK: 12
-        NACK: 93286
-        NACKE: 0
-        WB_ACK: 523837
-        NUM_MSG_TYPES: 0
-        ------ CORE 5 --------
-        Accesses: 1056263       Misses: 524385  Upgrade Misses: 11
-        GET: 10
-        GETX: 0
-        UPGR: 0
-        PUT: 46
-        PUTE: 524305
-        PUTX: 34
-        INV: 41
-        SWB: 0
-        WB: 0
-        INV_ACK: 20
-        UPGR_ACK: 11
-        NACK: 90148
-        NACKE: 122371
-        WB_ACK: 523837
-        NUM_MSG_TYPES: 0
-        ------ CORE 6 --------
-        Accesses: 1057166       Misses: 524385  Upgrade Misses: 12
-        GET: 12
-        GETX: 1
-        UPGR: 0
-        PUT: 44
-        PUTE: 524307
-        PUTX: 34
-        INV: 40
-        SWB: 0
-        WB: 0
-        INV_ACK: 20
-        UPGR_ACK: 12
-        NACK: 67068
-        NACKE: 127818
-        WB_ACK: 523837
-        NUM_MSG_TYPES: 0
-        ------ CORE 7 --------
-        Accesses: 1050054       Misses: 524380  Upgrade Misses: 12
-        GET: 7
-        GETX: 0
-        UPGR: 0
-        PUT: 43
-        PUTE: 524303
-        PUTX: 37
-        INV: 38
-        SWB: 0
-        WB: 0
-        INV_ACK: 17
-        UPGR_ACK: 9
-        NACK: 43091
-        NACKE: 189470
-        WB_ACK: 523839
-        NUM_MSG_TYPES: 0
+	------ CORE 0 --------
+	Accesses: 1605885	Misses: 1051274	Upgrade Misses: 6
+	GET: 86
+	GETX: 28
+	UPGR: 0
+	PUT: 33
+	PUTE: 525310
+	PUTX: 525931
+	INV: 366599
+	SWB: 0
+	WB: 0
+	INV_ACK: 10
+	UPGR_ACK: 6
+	NACK: 1
+	NACKE: 0
+	WB_ACK: 1050631
+	NUM_MSG_TYPES: 0
+	------ CORE 1 --------
+	Accesses: 1051751	Misses: 524384	Upgrade Misses: 11
+	GET: 19
+	GETX: 0
+	UPGR: 0
+	PUT: 40
+	PUTE: 524310
+	PUTX: 34
+	INV: 40
+	SWB: 0
+	WB: 0
+	INV_ACK: 21
+	UPGR_ACK: 11
+	NACK: 0
+	NACKE: 0
+	WB_ACK: 523838
+	NUM_MSG_TYPES: 0
+	------ CORE 2 --------
+	Accesses: 1056094	Misses: 524387	Upgrade Misses: 11
+	GET: 19
+	GETX: 0
+	UPGR: 0
+	PUT: 44
+	PUTE: 524308
+	PUTX: 35
+	INV: 45
+	SWB: 0
+	WB: 0
+	INV_ACK: 17
+	UPGR_ACK: 11
+	NACK: 93938
+	NACKE: 0
+	WB_ACK: 523836
+	NUM_MSG_TYPES: 0
+	------ CORE 3 --------
+	Accesses: 1058036	Misses: 524392	Upgrade Misses: 11
+	GET: 8
+	GETX: 0
+	UPGR: 0
+	PUT: 54
+	PUTE: 524304
+	PUTX: 34
+	INV: 46
+	SWB: 0
+	WB: 0
+	INV_ACK: 21
+	UPGR_ACK: 11
+	NACK: 93718
+	NACKE: 0
+	WB_ACK: 523837
+	NUM_MSG_TYPES: 0
+	------ CORE 4 --------
+	Accesses: 1052489	Misses: 524384	Upgrade Misses: 12
+	GET: 10
+	GETX: 0
+	UPGR: 0
+	PUT: 46
+	PUTE: 524304
+	PUTX: 34
+	INV: 40
+	SWB: 0
+	WB: 0
+	INV_ACK: 26
+	UPGR_ACK: 12
+	NACK: 93286
+	NACKE: 0
+	WB_ACK: 523837
+	NUM_MSG_TYPES: 0
+	------ CORE 5 --------
+	Accesses: 1056263	Misses: 524385	Upgrade Misses: 11
+	GET: 10
+	GETX: 0
+	UPGR: 0
+	PUT: 46
+	PUTE: 524305
+	PUTX: 34
+	INV: 41
+	SWB: 0
+	WB: 0
+	INV_ACK: 20
+	UPGR_ACK: 11
+	NACK: 90148
+	NACKE: 122371
+	WB_ACK: 523837
+	NUM_MSG_TYPES: 0
+	------ CORE 6 --------
+	Accesses: 1057166	Misses: 524385	Upgrade Misses: 12
+	GET: 12
+	GETX: 1
+	UPGR: 0
+	PUT: 44
+	PUTE: 524307
+	PUTX: 34
+	INV: 40
+	SWB: 0
+	WB: 0
+	INV_ACK: 20
+	UPGR_ACK: 12
+	NACK: 67068
+	NACKE: 127818
+	WB_ACK: 523837
+	NUM_MSG_TYPES: 0
+	------ CORE 7 --------
+	Accesses: 1050054	Misses: 524380	Upgrade Misses: 12
+	GET: 7
+	GETX: 0
+	UPGR: 0
+	PUT: 43
+	PUTE: 524303
+	PUTX: 37
+	INV: 38
+	SWB: 0
+	WB: 0
+	INV_ACK: 17
+	UPGR_ACK: 9
+	NACK: 43091
+	NACKE: 189470
+	WB_ACK: 523839
+	NUM_MSG_TYPES: 0
 ------L2 STATS-------
-        ------ BANK0 --------
-        GET: 524440
-        GETX: 65762
-        UPGR: 0
-        PUT: 0
-        PUTE: 0
-        PUTX: 0
-        INV: 0
-        SWB: 17
-        WB: 589661
-        INV_ACK: 22
-        UPGR_ACK: 0
-        NACK: 0
-        NACKE: 0
-        WB_ACK: 0
-        NUM_MSG_TYPES: 0
-        ------ BANK1 --------
-        GET: 524448
-        GETX: 65775
-        UPGR: 2
-        PUT: 0
-        PUTE: 0
-        PUTX: 0
-        INV: 0
-        SWB: 18
-        WB: 589688
-        INV_ACK: 16
-        UPGR_ACK: 0
-        NACK: 0
-        NACKE: 0
-        WB_ACK: 0
-        NUM_MSG_TYPES: 0
-        ------ BANK2 --------
-        GET: 587844
-        GETX: 65785
-        UPGR: 6
-        PUT: 0
-        PUTE: 0
-        PUTX: 0
-        INV: 0
-        SWB: 31
-        WB: 589698
-        INV_ACK: 16
-        UPGR_ACK: 0
-        NACK: 0
-        NACKE: 0
-        WB_ACK: 0
-        NUM_MSG_TYPES: 0
-        ------ BANK3 --------
-        GET: 587495
-        GETX: 88450
-        UPGR: 7
-        PUT: 0
-        PUTE: 0
-        PUTX: 0
-        INV: 0
-        SWB: 17
-        WB: 589681
-        INV_ACK: 24
-        UPGR_ACK: 0
-        NACK: 0
-        NACKE: 0
-        WB_ACK: 0
-        NUM_MSG_TYPES: 0
-        ------ BANK4 --------
-        GET: 1065439
-        GETX: 65772
-        UPGR: 0
-        PUT: 0
-        PUTE: 0
-        PUTX: 0
-        INV: 0
-        SWB: 13
-        WB: 589707
-        INV_ACK: 78
-        UPGR_ACK: 0
-        NACK: 0
-        NACKE: 0
-        WB_ACK: 0
-        NUM_MSG_TYPES: 0
-        ------ BANK5 --------
-        GET: 586883
-        GETX: 65788
-        UPGR: 1
-        PUT: 0
-        PUTE: 0
-        PUTX: 0
-        INV: 0
-        SWB: 11
-        WB: 589721
-        INV_ACK: 21
-        UPGR_ACK: 0
-        NACK: 0
-        NACKE: 0
-        WB_ACK: 0
-        NUM_MSG_TYPES: 0
-        ------ BANK6 --------
-        GET: 586589
-        GETX: 88295
-        UPGR: 63
-        PUT: 0
-        PUTE: 0
-        PUTX: 0
-        INV: 0
-        SWB: 84
-        WB: 589695
-        INV_ACK: 46
-        UPGR_ACK: 0
-        NACK: 0
-        NACKE: 0
-        WB_ACK: 0
-        NUM_MSG_TYPES: 0
-        ------ BANK7 --------
-        GET: 586104
-        GETX: 88011
-        UPGR: 7
-        PUT: 0
-        PUTE: 0
-        PUTX: 0
-        INV: 0
-        SWB: 9
-        WB: 589641
-        INV_ACK: 15
-        UPGR_ACK: 0
-        NACK: 0
-        NACKE: 0
-        WB_ACK: 0
-        NUM_MSG_TYPES: 0
+	 Misses: 4721305
+	------ BANK0 --------
+	GET: 524440
+	GETX: 65762
+	UPGR: 0
+	PUT: 0
+	PUTE: 0
+	PUTX: 0
+	INV: 0
+	SWB: 17
+	WB: 589661
+	INV_ACK: 22
+	UPGR_ACK: 0
+	NACK: 0
+	NACKE: 0
+	WB_ACK: 0
+	NUM_MSG_TYPES: 0
+	------ BANK1 --------
+	GET: 524448
+	GETX: 65775
+	UPGR: 2
+	PUT: 0
+	PUTE: 0
+	PUTX: 0
+	INV: 0
+	SWB: 18
+	WB: 589688
+	INV_ACK: 16
+	UPGR_ACK: 0
+	NACK: 0
+	NACKE: 0
+	WB_ACK: 0
+	NUM_MSG_TYPES: 0
+	------ BANK2 --------
+	GET: 587844
+	GETX: 65785
+	UPGR: 6
+	PUT: 0
+	PUTE: 0
+	PUTX: 0
+	INV: 0
+	SWB: 31
+	WB: 589698
+	INV_ACK: 16
+	UPGR_ACK: 0
+	NACK: 0
+	NACKE: 0
+	WB_ACK: 0
+	NUM_MSG_TYPES: 0
+	------ BANK3 --------
+	GET: 587495
+	GETX: 88450
+	UPGR: 7
+	PUT: 0
+	PUTE: 0
+	PUTX: 0
+	INV: 0
+	SWB: 17
+	WB: 589681
+	INV_ACK: 24
+	UPGR_ACK: 0
+	NACK: 0
+	NACKE: 0
+	WB_ACK: 0
+	NUM_MSG_TYPES: 0
+	------ BANK4 --------
+	GET: 1065439
+	GETX: 65772
+	UPGR: 0
+	PUT: 0
+	PUTE: 0
+	PUTX: 0
+	INV: 0
+	SWB: 13
+	WB: 589707
+	INV_ACK: 78
+	UPGR_ACK: 0
+	NACK: 0
+	NACKE: 0
+	WB_ACK: 0
+	NUM_MSG_TYPES: 0
+	------ BANK5 --------
+	GET: 586883
+	GETX: 65788
+	UPGR: 1
+	PUT: 0
+	PUTE: 0
+	PUTX: 0
+	INV: 0
+	SWB: 11
+	WB: 589721
+	INV_ACK: 21
+	UPGR_ACK: 0
+	NACK: 0
+	NACKE: 0
+	WB_ACK: 0
+	NUM_MSG_TYPES: 0
+	------ BANK6 --------
+	GET: 586589
+	GETX: 88295
+	UPGR: 63
+	PUT: 0
+	PUTE: 0
+	PUTX: 0
+	INV: 0
+	SWB: 84
+	WB: 589695
+	INV_ACK: 46
+	UPGR_ACK: 0
+	NACK: 0
+	NACKE: 0
+	WB_ACK: 0
+	NUM_MSG_TYPES: 0
+	------ BANK7 --------
+	GET: 586104
+	GETX: 88011
+	UPGR: 7
+	PUT: 0
+	PUTE: 0
+	PUTX: 0
+	INV: 0
+	SWB: 9
+	WB: 589641
+	INV_ACK: 15
+	UPGR_ACK: 0
+	NACK: 0
+	NACKE: 0
+	WB_ACK: 0
+	NUM_MSG_TYPES: 0
