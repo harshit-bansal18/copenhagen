@@ -20,6 +20,8 @@ void OTT::add_entry(unsigned long long addr, Ott_entry* entry){
 }
 
 void OTT::remove_entry(unsigned long long addr){
+//    log(" addr: " << addr);
+    free(table[addr]);
     table.erase(addr);
 }
 

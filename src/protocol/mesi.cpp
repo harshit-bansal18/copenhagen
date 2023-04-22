@@ -57,8 +57,12 @@ void Mesi::perform_ott_entry_removal(int core){
     Ott_entry* new_ott_entry;
 
     if(curr_state == MODIFIED){
+        queue<Trace*>& tr_queue = l1_cache->miss_trace_buffer->buffer[l1_block->addr];
+        while(!tr_queue.empty()){
+            free(tr_queue.front());
+            tr_queue.pop();
+        }
         handle_pending_msgs(core);
-
         l1_caches[core]->miss_trace_buffer->buffer.erase(l1_block->addr);
         l1_cache->ott->remove_entry(l1_block->addr);
     }
@@ -70,6 +74,7 @@ void Mesi::perform_ott_entry_removal(int core){
                 l1_cache->set_block_state(l1_block->index, l1_block->way, MODIFIED);
                 modified = true;
             }
+            free(tr_queue.front());
             tr_queue.pop();
         }
         log("Before handling msgs");
@@ -92,9 +97,11 @@ void Mesi::perform_ott_entry_removal(int core){
                 l1_cache->ott->table[l1_block->addr]->_msg.type = UPGR;
                 l1_cache->ott->table[l1_block->addr]->_msg.global_id = new_msg->global_id;
                 l1_cache->ott->table[l1_block->addr]->invalid = false;
+                free(tr_queue.front());
                 tr_queue.pop();
                 return;
             }
+            free(tr_queue.front());
             tr_queue.pop();
         }
         l1_caches[core]->miss_trace_buffer->buffer.erase(l1_block->addr);
@@ -102,6 +109,7 @@ void Mesi::perform_ott_entry_removal(int core){
 
     }
     else{
+        throw_error("perform ott removal called with curr_state = %s\n", state_names[curr_state].c_str());
         queue<Trace*>& tr_queue = l1_caches[core]->miss_trace_buffer->buffer[l1_block->addr];
         
         while(!tr_queue.empty()){
@@ -183,7 +191,7 @@ void Mesi::handle_victim_L1(int core, unsigned long long curr_msg_id){
     if (l1_cache->victim) {
         _victim = *l1_cache->victim;
         log("addr: " << _victim.addr);
-        delete l1_cache->victim;
+        free(l1_cache->victim);
         l1_cache->victim = NULL;
 
         if(l1_cache->ott->check_entry(_victim.addr)){
@@ -209,7 +217,7 @@ void Mesi::handle_victim_L1(int core, unsigned long long curr_msg_id){
             home_node = get_home_node(l1_block->addr, l2_cache);
             new_msg =  make_msg_from_L1(core, _victim.addr, WB, curr_msg_id);
             //Done: create OTT entry
-            assert(l1_cache->ott->check_entry(_victim.addr) == false); // DEBUG
+//            assert(l1_cache->ott->check_entry(_victim.addr) == false); // DEBUG
             new_ott_entry = create_ott_entry(new_msg, &_victim, 0, false);
             l1_cache->ott->add_entry(_victim.addr, new_ott_entry);
             l2_cache->queue_msg(new_msg, home_node);
@@ -294,8 +302,11 @@ void Mesi::handle_putx_L1(int core, unsigned long long curr_msg_id, int expected
 
     update_ott_entry(l1_caches[core], l1_block->addr, true, expected_invalidations);
     //if invals become zero already
-    if(l1_caches[core]->ott->table[l1_block->addr]->pending_invals != 0)
+    if(l1_caches[core]->ott->table[l1_block->addr]->pending_invals != 0) {
+        l1_caches[core]->lookup(l1_block);
+        assert(!l1_block->valid);
         goto ret;
+    }
 
 //    assert(ottentry->_msg.type == UPGR || ottentry->_msg.type == PUTX);
 
@@ -421,7 +432,7 @@ void Mesi::handle_getx_L1(int core, Msg *_msg){
     if(ott_entry != nullptr){
         
         assert(ott_entry->invalid == false);
-        
+        log("found ott entry");
         switch(ott_entry->_msg.type) {
             case GET:
             case GETX:
@@ -438,7 +449,7 @@ void Mesi::handle_getx_L1(int core, Msg *_msg){
 
         return;   
     }
-
+    log("Not found ott entry");
     l1_cache->lookup(l1_block);
     assert(l1_block->valid);
     switch(l1_block->block_state) {
@@ -688,6 +699,7 @@ void Mesi::handle_WB_ACK_L1(int core, unsigned long long curr_msg_id) {
     l2_cache->queue_msg(new_msg, home_node);
     l1_cache->ott->table[l1_block->addr]->_msg = *new_msg;
     l1_cache->ott->table[l1_block->addr]->invalid = false;
+    free(front_trace);
     l1_cache->miss_trace_buffer->buffer[l1_block->addr].pop();
 }
 
@@ -755,7 +767,7 @@ void Mesi::process_trace(Trace *trace_entry) {
     if(l1_cache->ott->check_entry(shifted_addr)){
         log("ott entry present");
         l1_cache->miss_trace_buffer->buffer[shifted_addr].push(trace_entry);
-        goto l1_ret;
+        goto trace_buf_ret;
     }
     log("ott entry not present");
     l1_cache->lookup(l1_block);
@@ -808,8 +820,12 @@ void Mesi::process_trace(Trace *trace_entry) {
     l1_cache->ott->add_entry(l1_block->addr, new_ott_entry);
 //    log("after ott add");
 
+
+
 l1_ret:
+    free(trace_entry);
 //    log("process trace finished");
+trace_buf_ret:
     l1_block->block_state = INVALID;
     l1_block->valid = false;
     l2_block->valid = false;
@@ -879,6 +895,7 @@ void Mesi::process_l1_msg(Msg *_msg, int core) {
         break;
     }
 
+    free(_msg);
     l1_block->valid = false;
     l1_block->block_state = INVALID;
     l2_block->valid = false;
@@ -929,6 +946,7 @@ void Mesi::process_l2_msg(Msg *_msg, int bank_id) {
         break;
     }
 
+    free(_msg);
     l1_block->valid = false;
     l1_block->block_state = INVALID;
     l2_block->valid = false;
@@ -1370,7 +1388,7 @@ void Mesi::handle_victim_L2(int bank_id, int source_core, unsigned long long cur
 
     if (l2_cache->victim) {
         _victim = *l2_cache->victim;
-        delete l2_cache->victim;
+        free(l2_cache->victim);
         l2_cache->victim = NULL;
         log("addr: " << _victim.addr << " dir state: " << state_names[_victim.dir_entry.curr_state]);
         // some block got evicted.

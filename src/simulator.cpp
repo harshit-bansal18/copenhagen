@@ -141,8 +141,8 @@ void Simulator::start_simulator() {
     string trace_line;
 //    int executed_something = 6;
     bool executed_something = false;
-
-    fill_traces();
+    //will give error in prog1
+//    fill_traces();
     do {
         unsigned long long min_global_id = LONG_LONG_MAX;
         tmp_trace = nullptr;
@@ -170,6 +170,14 @@ void Simulator::start_simulator() {
             Trace *_t2;
             _t2 = nullptr;
             queue<Trace *> &ti = l1_caches[i]->trace_input;
+
+            //load new traces
+            if(ti.empty() && getline(f_traces[i], trace_line)){
+                Trace* _tmp_trace = process_trace_line(trace_line);
+                if (_tmp_trace != nullptr)
+                    l1_caches[i]->trace_input.push(_tmp_trace);
+            }
+
             if (ti.empty())
                 continue;
 
@@ -185,9 +193,6 @@ void Simulator::start_simulator() {
             global_counter_to_process++;
             tmp_trace = l1_caches[selected_core]->trace_input.front();
             l1_caches[selected_core]->trace_input.pop();
-            if (cycle_counter == 20371) {
-                cout << "new front: " << l1_caches[selected_core]->trace_input.front()->global_id << "\n";
-            }
 
         }
 
@@ -218,6 +223,7 @@ void Simulator::start_simulator() {
 
 void Simulator::print_stats() {
     int bank_id = 0;
+    cout << "Cycles: " << cycle_counter << "\n";
     cout << "------L1 STATS-------\n";
     for (auto cache:l1_caches){
         cout << "\t------ CORE " << cache->ID << " --------\n";

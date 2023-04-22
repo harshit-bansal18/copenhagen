@@ -196,7 +196,7 @@ void L2Cache::drop_evicted_block(Block *_block) {
     if (eb_buffer->buffer.find(_block->addr) == eb_buffer->buffer.end())
         throw_error("%s: evicted block not found\n", __func__);
 
-    delete eb_buffer->buffer[_block->addr];
+    free(eb_buffer->buffer[_block->addr]);
     eb_buffer->buffer.erase(_block->addr);
 }
 

@@ -33,6 +33,7 @@ void L1Cache::lookup(Block *_block) {
             return;
         }
     }
+    _block->valid = false;
 }
 
 void L1Cache::invalidate(Block *_block) {
@@ -99,7 +100,7 @@ int L1Cache::invoke_repl_policy(int index) {
 }
 
 void L1Cache::copy(Block *_block) {
-    log("copy start");
+    log("Copy to L1 core " << ID << " for block addr: " << _block->addr);
     _block->way = get_target_way(_block->index);
 
     if (_block->way < 0) {
@@ -107,16 +108,9 @@ void L1Cache::copy(Block *_block) {
         _block->way = invoke_repl_policy(_block->index);
 
     }
-
-    log("block_way: " << _block->way);
-    log("block found");
 //    sets[_block->index]->invalid_ways.erase(_block->way);
     _block->valid = 1; // to be sure
-    log("before assigning sets");
     sets[_block->index]->blocks[_block->way] = *_block;
-
-    log("copy end");
-
 }
 
 int L1Cache::get_target_way(int index) {
@@ -151,11 +145,12 @@ void L1Cache::set_block_state(int index, int way, state new_state) {
 }
 
 void L1Cache::queue_msg(Msg *_msg) {
-    log("core: " << ID << " msg: " << msg_names[_msg->type] << " global_id: " << _msg->global_id);
+//    log("core: " << ID << " msg: " << msg_names[_msg->type] << " global_id: " << _msg->global_id);
     msgs.push(_msg);
 }
 
 void L1Cache::insert_to_pending(Msg *_msg){
+    log("core: " << ID << " addr: " << _msg->addr);
     pending_msgs_buffer->buffer[_msg->addr].push(*_msg);
 }
 

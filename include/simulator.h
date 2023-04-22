@@ -120,7 +120,7 @@ class Block {
     public:
     unsigned long long addr;
     unsigned long tag;
-    long index;
+    int index;
     int way;
     bool  valid;
     Directory_entry dir_entry; // for L2 cache

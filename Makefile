@@ -13,3 +13,4 @@ init5:
 clean:
 	rm -f init5
 	echo '' > log.txt
+	echo 3 | sudo tee /proc/sys/vm/drop_caches

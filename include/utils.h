@@ -14,5 +14,6 @@ int get_tag_bits(int b_size, int i_size);
     throw std::runtime_error(buf); \
 })
 
-#define log(x) (debug << __func__ << ": " << x << "\n")
+#define log(x) ;
+//#define log(x) (debug << __func__ << ": " << x << "\n")
 #endif
